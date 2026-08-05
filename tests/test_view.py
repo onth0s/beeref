@@ -763,7 +763,10 @@ def test_on_action_paste_internal(mimedata_mock, clear_mock, view):
 @patch('beeref.scene.BeeGraphicsScene.clearSelection')
 @patch('PyQt6.QtGui.QClipboard.text')
 @patch('PyQt6.QtGui.QClipboard.image')
-def test_on_action_paste_when_text(img_mock, text_mock, clear_mock, view):
+@patch('PyQt6.QtGui.QClipboard.mimeData')
+def test_on_action_paste_when_text(
+        mime_mock, img_mock, text_mock, clear_mock, view):
+    mime_mock.return_value = QtCore.QMimeData()
     img_mock.return_value = QtGui.QImage()
     text_mock.return_value = 'foo bar'
     view.cancel_active_modes = MagicMock()
@@ -775,12 +778,80 @@ def test_on_action_paste_when_text(img_mock, text_mock, clear_mock, view):
     view.cancel_active_modes.assert_called_once_with()
 
 
+@patch('beeref.view.BeeGraphicsView.do_insert_images')
+@patch('PyQt6.QtGui.QClipboard.image')
+def test_on_action_paste_with_mime_file_urls(
+        clipboard_mock, do_insert_mock, view, imgfilename3x3):
+    mime = QtCore.QMimeData()
+    mime.setUrls([QtCore.QUrl.fromLocalFile(imgfilename3x3)])
+    clipboard_mock.return_value = QtGui.QImage()
+    with patch('PyQt6.QtGui.QClipboard.mimeData', return_value=mime):
+        view.cancel_active_modes = MagicMock()
+        view.on_action_paste()
+    urls = do_insert_mock.call_args[0][0]
+    assert len(urls) == 1
+    assert urls[0].isLocalFile() is True
+    assert os.path.normpath(urls[0].toLocalFile()) == \
+        os.path.normpath(imgfilename3x3)
+    view.cancel_active_modes.assert_called_once_with()
+
+
+@patch('beeref.view.BeeGraphicsView.do_insert_images')
+@patch('PyQt6.QtGui.QClipboard.image')
+def test_on_action_paste_with_file_url_text(
+        clipboard_mock, do_insert_mock, view, imgfilename3x3):
+    mime = QtCore.QMimeData()
+    clipboard_mock.return_value = QtGui.QImage()
+    url = QtCore.QUrl.fromLocalFile(imgfilename3x3).toString()
+    with patch('PyQt6.QtGui.QClipboard.mimeData', return_value=mime), \
+            patch('PyQt6.QtGui.QClipboard.text', return_value=url):
+        view.cancel_active_modes = MagicMock()
+        view.on_action_paste()
+    path = do_insert_mock.call_args[0][0][0]
+    assert os.path.normpath(path) == os.path.normpath(imgfilename3x3)
+    view.cancel_active_modes.assert_called_once_with()
+
+
+@patch('beeref.view.BeeGraphicsView.do_insert_images')
+@patch('PyQt6.QtGui.QClipboard.image')
+def test_on_action_paste_with_http_url_text(
+        clipboard_mock, do_insert_mock, view):
+    mime = QtCore.QMimeData()
+    clipboard_mock.return_value = QtGui.QImage()
+    with patch('PyQt6.QtGui.QClipboard.mimeData', return_value=mime), \
+            patch('PyQt6.QtGui.QClipboard.text',
+                  return_value='https://example.com/image.png'):
+        view.cancel_active_modes = MagicMock()
+        view.on_action_paste()
+    url = do_insert_mock.call_args[0][0][0]
+    assert isinstance(url, QtCore.QUrl)
+    assert url.toString() == 'https://example.com/image.png'
+    view.cancel_active_modes.assert_called_once_with()
+
+
+@patch('beeref.view.BeeGraphicsView.do_insert_images')
+@patch('PyQt6.QtGui.QClipboard.image')
+def test_on_action_paste_with_local_path_text(
+        clipboard_mock, do_insert_mock, view, imgfilename3x3):
+    mime = QtCore.QMimeData()
+    clipboard_mock.return_value = QtGui.QImage()
+    with patch('PyQt6.QtGui.QClipboard.mimeData', return_value=mime), \
+            patch('PyQt6.QtGui.QClipboard.text',
+                  return_value=imgfilename3x3):
+        view.cancel_active_modes = MagicMock()
+        view.on_action_paste()
+    assert do_insert_mock.call_args[0][0] == [imgfilename3x3]
+    view.cancel_active_modes.assert_called_once_with()
+
+
 @patch('beeref.scene.BeeGraphicsScene.clearSelection')
 @patch('PyQt6.QtGui.QClipboard.text')
 @patch('PyQt6.QtGui.QClipboard.image')
 @patch('beeref.widgets.BeeNotification')
+@patch('PyQt6.QtGui.QClipboard.mimeData')
 def test_on_action_paste_when_empty(
-        notification_mock, img_mock, text_mock, clear_mock, view):
+        mime_mock, notification_mock, img_mock, text_mock, clear_mock, view):
+    mime_mock.return_value = QtCore.QMimeData()
     view.cancel_active_modes = MagicMock()
     img_mock.return_value = QtGui.QImage()
     text_mock.return_value = ''
@@ -811,9 +882,11 @@ def test_init_with_paste_on_startup(
 @patch('beeref.widgets.BeeNotification')
 @patch('PyQt6.QtGui.QClipboard.text')
 @patch('PyQt6.QtGui.QClipboard.image')
+@patch('PyQt6.QtGui.QClipboard.mimeData')
 def test_init_with_paste_on_startup_when_empty(
-        clipboard_mock, text_mock, notification_mock,
+        mime_mock, clipboard_mock, text_mock, notification_mock,
         qtbot, commandline_args):
+    mime_mock.return_value = QtCore.QMimeData()
     commandline_args.paste = True
     clipboard_mock.return_value = QtGui.QImage()
     text_mock.return_value = ''

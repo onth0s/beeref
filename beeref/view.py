@@ -688,7 +688,8 @@ class BeeGraphicsView(MainControlsMixin,
         self.cancel_active_modes()
         logger.debug('Pasting from clipboard...')
         clipboard = QtWidgets.QApplication.clipboard()
-        pos = self.mapToScene(self.mapFromGlobal(self.cursor().pos()))
+        viewport_pos = self.mapFromGlobal(self.cursor().pos())
+        pos = self.mapToScene(viewport_pos)
 
         # See if we need to look up the internal clipboard:
         data = clipboard.mimeData().data('beeref/items')
@@ -707,8 +708,33 @@ class BeeGraphicsView(MainControlsMixin,
                 # This is the first image in the scene
                 self.on_action_fit_scene()
             return
+
+        # Copying a file (e.g. from a file manager or browser) puts its
+        # URL(s) on the clipboard instead of a bitmap, so insert the
+        # image file(s) directly. This also covers remote URLs, which
+        # are downloaded by the image loader.
+        mime = clipboard.mimeData()
+        if mime.hasUrls():
+            urls = mime.urls()
+            logger.debug(f'Found urls in clipboard: {urls}')
+            self.do_insert_images(urls, viewport_pos)
+            return
+
         text = clipboard.text()
         if text:
+            url = QtCore.QUrl(text)
+            if url.isLocalFile():
+                logger.debug(f'Pasting local file URL: {text}')
+                self.do_insert_images([url.toLocalFile()], viewport_pos)
+                return
+            if url.isValid() and url.scheme() in ('http', 'https'):
+                logger.debug(f'Pasting remote URL: {text}')
+                self.do_insert_images([url], viewport_pos)
+                return
+            if os.path.isfile(text):
+                logger.debug(f'Pasting local file path: {text}')
+                self.do_insert_images([text], viewport_pos)
+                return
             item = BeeTextItem(text)
             item.setScale(1 / self.get_scale())
             self.undo_stack.push(commands.InsertItems(self.scene, [item], pos))
