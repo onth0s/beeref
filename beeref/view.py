@@ -244,6 +244,9 @@ class BeeGraphicsView(MainControlsMixin,
         self.parent.create()
         self.parent.show()
 
+    def on_action_minimize(self):
+        self.parent.showMinimized()
+
     def on_action_show_scrollbars(self, checked):
         if checked:
             self.setHorizontalScrollBarPolicy(

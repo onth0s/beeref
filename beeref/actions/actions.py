@@ -411,6 +411,7 @@ actions = ActionList([
         text='Show &Title Bar',
         checkable=True,
         checked=True,
+        settings='View/show_titlebar',
         callback='on_action_show_titlebar',
     ),
     Action(
@@ -431,6 +432,11 @@ actions = ActionList([
         text='&Always On Top',
         checkable=True,
         callback='on_action_always_on_top',
+    ),
+    Action(
+        id='minimize',
+        text='Minimize Window',
+        callback='on_action_minimize',
     ),
     Action(
         id='settings',

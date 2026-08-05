@@ -895,8 +895,8 @@ def test_on_action_sample_color_when_multi_selection(view, item):
                                 .assert_called_once_with()
 
 
-@patch('PyQt6.QtWidgets.QWidget.create')
-@patch('PyQt6.QtWidgets.QWidget.destroy')
+@patch('PyQt6.QtWidgets.QMainWindow.create')
+@patch('PyQt6.QtWidgets.QMainWindow.destroy')
 @patch('PyQt6.QtWidgets.QWidget.show')
 def test_on_action_always_on_top_checked(
         show_mock, destroy_mock, create_mock, view):
@@ -907,8 +907,14 @@ def test_on_action_always_on_top_checked(
     create_mock.assert_called_once()
 
 
-@patch('PyQt6.QtWidgets.QWidget.create')
-@patch('PyQt6.QtWidgets.QWidget.destroy')
+@patch('PyQt6.QtWidgets.QWidget.showMinimized')
+def test_on_action_minimize(show_mock, view):
+    view.on_action_minimize()
+    show_mock.assert_called_once()
+
+
+@patch('PyQt6.QtWidgets.QMainWindow.create')
+@patch('PyQt6.QtWidgets.QMainWindow.destroy')
 @patch('PyQt6.QtWidgets.QWidget.show')
 def test_on_action_always_on_top_unchecked(
         show_mock, destroy_mock, create_mock, view):
@@ -927,8 +933,8 @@ def test_on_action_show_menubar(view):
     assert view.parent.menuBar().actions() == []
 
 
-@patch('PyQt6.QtWidgets.QWidget.create')
-@patch('PyQt6.QtWidgets.QWidget.destroy')
+@patch('PyQt6.QtWidgets.QMainWindow.create')
+@patch('PyQt6.QtWidgets.QMainWindow.destroy')
 @patch('PyQt6.QtWidgets.QWidget.show')
 def test_on_action_show_titlebar_checked(
         show_mock, destroy_mock, create_mock, view):
@@ -939,8 +945,8 @@ def test_on_action_show_titlebar_checked(
     create_mock.assert_called_once()
 
 
-@patch('PyQt6.QtWidgets.QWidget.create')
-@patch('PyQt6.QtWidgets.QWidget.destroy')
+@patch('PyQt6.QtWidgets.QMainWindow.create')
+@patch('PyQt6.QtWidgets.QMainWindow.destroy')
 @patch('PyQt6.QtWidgets.QWidget.show')
 def test_on_action_show_titlebar_unchecked(
         show_mock, destroy_mock, create_mock, view):
@@ -949,6 +955,22 @@ def test_on_action_show_titlebar_unchecked(
     show_mock.assert_called_once()
     destroy_mock.assert_called_once()
     create_mock.assert_called_once()
+
+
+def test_show_titlebar_setting_persisted(view):
+    actions.actions['show_titlebar'].qaction.setChecked(False)
+    assert view.settings.value(
+        'View/show_titlebar', True, type=bool) is False
+
+
+def test_show_titlebar_setting_restored_on_startup(
+        qapp, commandline_args, settings):
+    settings.setValue('View/show_titlebar', False)
+    parent = QtWidgets.QMainWindow()
+    view = BeeGraphicsView(qapp, parent)
+    assert parent.windowFlags() & Qt.WindowType.FramelessWindowHint
+    assert actions.actions['show_titlebar'].qaction.isChecked() is False
+    del view
 
 
 @patch('beeref.widgets.welcome_overlay.WelcomeOverlay.cursor')
