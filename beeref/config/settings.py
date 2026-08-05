@@ -38,6 +38,11 @@ parser.add_argument(
           'bee file, all files will be treated as images and inserted as '
           'if opened with "Insert -> Images".'))
 parser.add_argument(
+    '--paste',
+    default=False,
+    action='store_true',
+    help='paste an image from the clipboard into the scene on startup')
+parser.add_argument(
     '--settings-dir',
     help='settings directory to use instead of default location')
 parser.add_argument(

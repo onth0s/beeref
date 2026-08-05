@@ -793,6 +793,38 @@ def test_on_action_paste_when_empty(
     view.cancel_active_modes.assert_called_once_with()
 
 
+@patch('beeref.view.BeeGraphicsView.on_action_fit_scene')
+@patch('PyQt6.QtGui.QClipboard.image')
+def test_init_with_paste_on_startup(
+        clipboard_mock, fit_mock, qtbot, commandline_args, imgfilename3x3):
+    commandline_args.paste = True
+    clipboard_mock.return_value = QtGui.QImage(imgfilename3x3)
+    parent = QtWidgets.QMainWindow()
+    view = BeeGraphicsView(QtWidgets.QApplication.instance(), parent)
+    qtbot.addWidget(parent)
+    qtbot.wait(50)
+    assert len(view.scene.items()) == 1
+    assert view.scene.items()[0].isSelected() is True
+    fit_mock.assert_called_once_with()
+
+
+@patch('beeref.widgets.BeeNotification')
+@patch('PyQt6.QtGui.QClipboard.text')
+@patch('PyQt6.QtGui.QClipboard.image')
+def test_init_with_paste_on_startup_when_empty(
+        clipboard_mock, text_mock, notification_mock,
+        qtbot, commandline_args):
+    commandline_args.paste = True
+    clipboard_mock.return_value = QtGui.QImage()
+    text_mock.return_value = ''
+    parent = QtWidgets.QMainWindow()
+    view = BeeGraphicsView(QtWidgets.QApplication.instance(), parent)
+    qtbot.addWidget(parent)
+    qtbot.wait(50)
+    assert len(view.scene.items()) == 0
+    notification_mock.assert_called()
+
+
 @patch('beeref.view.BeeGraphicsView.on_action_copy')
 def test_on_action_cut(copy_mock, view, item):
     view.scene.addItem(item)

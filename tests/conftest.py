@@ -31,6 +31,7 @@ def commandline_args():
     config_patcher = patch('beeref.view.commandline_args')
     config_mock = config_patcher.start()
     config_mock.filenames = []
+    config_mock.paste = False
     yield config_mock
     config_patcher.stop()
 

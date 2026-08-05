@@ -90,6 +90,9 @@ class BeeGraphicsView(MainControlsMixin,
             else:
                 self.do_insert_images(commandline_args.filenames)
 
+        if commandline_args.paste:
+            QtCore.QTimer.singleShot(0, self.on_action_paste)
+
         self.update_window_title()
 
     @property
