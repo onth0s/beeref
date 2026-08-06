@@ -431,6 +431,7 @@ actions = ActionList([
         id='always_on_top',
         text='&Always On Top',
         checkable=True,
+        settings='View/always_on_top',
         callback='on_action_always_on_top',
     ),
     Action(

@@ -51,6 +51,7 @@ class BeeGraphicsScene(QtWidgets.QGraphicsScene):
         self.items_to_add = Queue()
         self.edit_item = None
         self.crop_item = None
+        self.saved_view_state = None
         self.settings = BeeSettings()
         self.clear()
         self._clear_ongoing = False

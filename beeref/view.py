@@ -171,10 +171,31 @@ class BeeGraphicsView(MainControlsMixin,
         return QtCore.QPoint(round(self.size().width() / 2),
                              round(self.size().height() / 2))
 
+    def get_view_state(self):
+        if not self.scene.items():
+            return None
+        center = self.mapToScene(self.get_view_center())
+        return {
+            'scale': self.get_scale(),
+            'center_x': center.x(),
+            'center_y': center.y(),
+        }
+
+    def apply_saved_view_state(self):
+        state = self.scene.saved_view_state
+        if state and self.scene.items():
+            scale = state['scale']
+            center = QtCore.QPointF(state['center_x'], state['center_y'])
+            self.setTransform(QtGui.QTransform.fromScale(scale, scale))
+            self.centerOn(center)
+            return True
+        return False
+
     def clear_scene(self):
         logging.debug('Clearing scene...')
         self.cancel_active_modes()
         self.scene.clear()
+        self.scene.saved_view_state = None
         self.undo_stack.clear()
         self.filename = None
         self.setTransform(QtGui.QTransform())
@@ -420,7 +441,8 @@ class BeeGraphicsView(MainControlsMixin,
         else:
             self.filename = filename
             self.scene.add_queued_items()
-            self.on_action_fit_scene()
+            if not self.apply_saved_view_state():
+                self.on_action_fit_scene()
 
     def on_action_open_recent_file(self, filename):
         confirm = self.get_confirmation_unsaved_changes(
@@ -473,8 +495,10 @@ class BeeGraphicsView(MainControlsMixin,
     def do_save(self, filename, create_new):
         if not fileio.is_bee_file(filename):
             filename = f'{filename}.bee'
+        view_state = self.get_view_state()
         self.worker = fileio.ThreadedIO(
-            fileio.save_bee, filename, self.scene, create_new=create_new)
+            fileio.save_bee, filename, self.scene, create_new=create_new,
+            view_state=view_state)
         self.worker.finished.connect(self.on_saving_finished)
         self.progress = widgets.BeeProgressDialog(
             f'Saving {filename}',

@@ -1078,6 +1078,59 @@ def test_show_titlebar_setting_restored_on_startup(
     del view
 
 
+@patch('PyQt6.QtWidgets.QMainWindow.create')
+@patch('PyQt6.QtWidgets.QMainWindow.destroy')
+@patch('PyQt6.QtWidgets.QWidget.show')
+def test_always_on_top_setting_persisted(
+        show_mock, destroy_mock, create_mock, view):
+    try:
+        actions.actions['always_on_top'].qaction.setChecked(True)
+        assert view.settings.value(
+            'View/always_on_top', False, type=bool) is True
+    finally:
+        actions.actions['always_on_top'].qaction.setChecked(False)
+        view.settings.remove('View/always_on_top')
+
+
+@patch('PyQt6.QtWidgets.QMainWindow.create')
+@patch('PyQt6.QtWidgets.QMainWindow.destroy')
+@patch('PyQt6.QtWidgets.QWidget.show')
+def test_always_on_top_setting_restored_on_startup(
+        show_mock, destroy_mock, create_mock, qapp, commandline_args, settings):
+    try:
+        settings.setValue('View/always_on_top', True)
+        parent = QtWidgets.QMainWindow()
+        view = BeeGraphicsView(qapp, parent)
+        assert parent.windowFlags() & Qt.WindowType.WindowStaysOnTopHint
+        assert actions.actions['always_on_top'].qaction.isChecked() is True
+        del view
+    finally:
+        actions.actions['always_on_top'].qaction.setChecked(False)
+        settings.remove('View/always_on_top')
+
+
+def test_get_view_state_and_apply_saved_view_state(view):
+    assert view.get_view_state() is None
+    assert view.apply_saved_view_state() is False
+
+    item = BeeTextItem('Hello')
+    view.scene.addItem(item)
+
+    state = view.get_view_state()
+    assert state is not None
+    assert 'scale' in state
+    assert 'center_x' in state
+    assert 'center_y' in state
+
+    view.scene.saved_view_state = {
+        'scale': 2.5,
+        'center_x': 100.0,
+        'center_y': 200.0,
+    }
+    assert view.apply_saved_view_state() is True
+    assert view.get_scale() == 2.5
+
+
 @patch('beeref.widgets.welcome_overlay.WelcomeOverlay.cursor')
 def test_on_action_move_window_when_welcome_overlay(cursor_mock, view):
     cursor_mock.return_value = MagicMock(
