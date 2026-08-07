@@ -265,11 +265,27 @@ class KeyboardSettings(QtCore.QSettings):
             invertible=False,
         ),
         MouseConfig(
+            id='opacity1',
+            group='opacity',
+            text='Change Opacity',
+            button='Left',
+            modifiers=('Ctrl', 'Alt'),
+            invertible=False,
+        ),
+        MouseConfig(
+            id='opacity2',
+            group='opacity (alternative)',
+            text='Change Opacity',
+            button='Not Configured',
+            modifiers=(),
+            invertible=False,
+        ),
+        MouseConfig(
             id='movewindow1',
             group='movewindow',
             text='Move Window',
             button='Left',
-            modifiers=('Ctrl', 'Alt'),
+            modifiers=('Ctrl', 'Shift'),
             invertible=False,
         ),
         MouseConfig(

@@ -35,3 +35,7 @@ This project deliberately has NO `.github/` directory and NO GitHub Actions
 workflows or CI. The old "pytest" GitHub Actions run is dead — ignore its
 failure notifications. Do NOT recreate `.github/` or add any workflows back;
 run checks locally instead.
+
+### Code Checks / Linting
+
+Run checks locally using `ruff` (`.venv\Scripts\ruff.exe check .`) and `pytest` (`.venv\Scripts\pytest.exe`).

@@ -46,6 +46,7 @@ class BeeGraphicsView(MainControlsMixin,
     PAN_MODE = 1
     ZOOM_MODE = 2
     SAMPLE_COLOR_MODE = 3
+    OPACITY_MODE = 4
 
     def __init__(self, app, parent=None):
         super().__init__(parent)
@@ -110,6 +111,7 @@ class BeeGraphicsView(MainControlsMixin,
     def cancel_active_modes(self):
         self.scene.cancel_active_modes()
         self.cancel_sample_color_mode()
+        self.cancel_opacity_mode()
         self.active_mode = None
 
     def cancel_sample_color_mode(self):
@@ -121,6 +123,17 @@ class BeeGraphicsView(MainControlsMixin,
             del self.sample_color_widget
         if self.scene.has_multi_selection():
             self.scene.multi_select_item.bring_to_front()
+
+    def cancel_opacity_mode(self):
+        if self.active_mode == self.OPACITY_MODE:
+            logger.debug('Cancel opacity mode')
+            self.active_mode = None
+            self.viewport().unsetCursor()
+            if hasattr(self, 'opacity_images') and self.opacity_images:
+                for img, start_opacity in zip(self.opacity_images, self.opacity_start_values):
+                    img.setOpacity(start_opacity)
+                self.opacity_images = None
+                self.opacity_start_values = None
 
     def update_window_title(self):
         clean = self.undo_stack.isClean()
@@ -934,6 +947,20 @@ class BeeGraphicsView(MainControlsMixin,
 
         action, inverted = self.keyboard_settings.mouse_action_for_event(event)
 
+        if action == 'opacity':
+            images = list(filter(
+                lambda item: item.is_image,
+                self.scene.selectedItems(user_only=True)))
+            if images:
+                logger.trace('Begin opacity change')
+                self.active_mode = self.OPACITY_MODE
+                self.opacity_images = images
+                self.opacity_start_x = event.position().x()
+                self.opacity_start_values = [img.opacity() for img in images]
+                self.viewport().setCursor(Qt.CursorShape.SizeHorCursor)
+                event.accept()
+                return
+
         if action == 'zoom':
             self.active_mode = self.ZOOM_MODE
             self.event_start = event.position()
@@ -956,6 +983,15 @@ class BeeGraphicsView(MainControlsMixin,
         super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event):
+        if self.active_mode == self.OPACITY_MODE:
+            dx = event.position().x() - self.opacity_start_x
+            delta = dx / 300.0
+            for img, start_opacity in zip(self.opacity_images, self.opacity_start_values):
+                new_opacity = max(0.10, min(1.0, start_opacity + delta))
+                img.setOpacity(new_opacity)
+            event.accept()
+            return
+
         if self.active_mode == self.PAN_MODE:
             self.reset_previous_transform()
             pos = event.position()
@@ -987,6 +1023,22 @@ class BeeGraphicsView(MainControlsMixin,
         super().mouseMoveEvent(event)
 
     def mouseReleaseEvent(self, event):
+        if self.active_mode == self.OPACITY_MODE:
+            logger.trace('End opacity change')
+            self.viewport().unsetCursor()
+            self.active_mode = None
+            if hasattr(self, 'opacity_images') and self.opacity_images:
+                final_opacity = self.opacity_images[0].opacity()
+                images = self.opacity_images
+                start_vals = self.opacity_start_values
+                self.opacity_images = None
+                self.opacity_start_values = None
+                for img, start_op in zip(images, start_vals):
+                    img.setOpacity(start_op)
+                self.undo_stack.push(
+                    commands.ChangeOpacity(images, final_opacity))
+            event.accept()
+            return
         if self.active_mode == self.PAN_MODE:
             logger.trace('End pan')
             self.viewport().unsetCursor()
@@ -1008,6 +1060,10 @@ class BeeGraphicsView(MainControlsMixin,
 
     def keyPressEvent(self, event):
         if self.keyPressEventMainControls(event):
+            return
+        if self.active_mode == self.OPACITY_MODE:
+            self.cancel_opacity_mode()
+            event.accept()
             return
         if self.active_mode == self.SAMPLE_COLOR_MODE:
             self.cancel_sample_color_mode()

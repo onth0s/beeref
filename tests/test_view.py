@@ -1,9 +1,10 @@
 import os.path
-from pathlib import Path
 import shutil
 import sqlite3
-from unittest.mock import MagicMock, patch, mock_open
+from pathlib import Path
+from unittest.mock import MagicMock, mock_open, patch
 
+import pytest
 from PyQt6 import QtCore, QtGui, QtWidgets
 from PyQt6.QtCore import Qt
 
@@ -1590,16 +1591,94 @@ def test_mouse_press_sample_color_when_no_color(
 def test_mouse_press_move_window(cursor_mock, mouse_event_mock, view):
     event = MagicMock()
     cursor_mock.return_value = MagicMock(
-        pos=MagicMock(return_value=QtCore.QPointF(10.0, 20.0)))
+        pos=MagicMock(return_value=view.mapToGlobal(QtCore.QPointF(10.0, 20.0))))
     event.button.return_value = Qt.MouseButton.LeftButton
     event.modifiers.return_value = (
-        Qt.KeyboardModifier.AltModifier | Qt.KeyboardModifier.ControlModifier)
+        Qt.KeyboardModifier.ShiftModifier | Qt.KeyboardModifier.ControlModifier)
     view.mousePressEvent(event)
     assert view.active_mode is None
     assert view.movewin_active is True
     assert view.event_start == view.mapToGlobal(QtCore.QPointF(10.0, 20.0))
     mouse_event_mock.assert_not_called()
     event.accept.assert_called_once_with()
+
+
+def test_mouse_press_opacity_mode(view):
+    item = BeePixmapItem(QtGui.QImage(10, 10, QtGui.QImage.Format.Format_RGB32))
+    view.scene.addItem(item)
+    item.setSelected(True)
+
+    event = MagicMock()
+    event.button.return_value = Qt.MouseButton.LeftButton
+    event.modifiers.return_value = (
+        Qt.KeyboardModifier.AltModifier | Qt.KeyboardModifier.ControlModifier)
+    event.position.return_value = QtCore.QPointF(100.0, 50.0)
+
+    view.mousePressEvent(event)
+
+    assert view.active_mode == view.OPACITY_MODE
+    assert view.opacity_start_x == 100.0
+    assert view.opacity_images == [item]
+    assert view.opacity_start_values == [1.0]
+    event.accept.assert_called_once()
+
+
+def test_mouse_move_opacity_mode(view):
+    item = BeePixmapItem(QtGui.QImage(10, 10, QtGui.QImage.Format.Format_RGB32))
+    view.scene.addItem(item)
+    item.setSelected(True)
+    item.setOpacity(0.5)
+
+    view.active_mode = view.OPACITY_MODE
+    view.opacity_start_x = 100.0
+    view.opacity_images = [item]
+    view.opacity_start_values = [0.5]
+
+    event = MagicMock()
+    event.position.return_value = QtCore.QPointF(160.0, 50.0)
+    view.mouseMoveEvent(event)
+
+    assert pytest.approx(item.opacity()) == 0.7
+    event.accept.assert_called_once()
+
+
+def test_mouse_move_opacity_mode_clamped_min(view):
+    item = BeePixmapItem(QtGui.QImage(10, 10, QtGui.QImage.Format.Format_RGB32))
+    view.scene.addItem(item)
+    item.setSelected(True)
+    item.setOpacity(0.5)
+
+    view.active_mode = view.OPACITY_MODE
+    view.opacity_start_x = 100.0
+    view.opacity_images = [item]
+    view.opacity_start_values = [0.5]
+
+    event = MagicMock()
+    event.position.return_value = QtCore.QPointF(-300.0, 50.0)
+    view.mouseMoveEvent(event)
+
+    assert pytest.approx(item.opacity()) == 0.10
+    event.accept.assert_called_once()
+
+
+def test_mouse_release_opacity_mode(view):
+    item = BeePixmapItem(QtGui.QImage(10, 10, QtGui.QImage.Format.Format_RGB32))
+    view.scene.addItem(item)
+    item.setSelected(True)
+
+    view.active_mode = view.OPACITY_MODE
+    view.opacity_start_x = 100.0
+    view.opacity_images = [item]
+    view.opacity_start_values = [0.5]
+    item.setOpacity(0.8)
+
+    event = MagicMock()
+    view.mouseReleaseEvent(event)
+
+    assert view.active_mode is None
+    assert pytest.approx(item.opacity()) == 0.8
+    assert view.undo_stack.count() == 1
+    event.accept.assert_called_once()
 
 
 @patch('PyQt6.QtWidgets.QGraphicsView.mousePressEvent')
@@ -1704,11 +1783,13 @@ def test_mouse_move_sample_color(mouse_event_mock, view):
 @patch('PyQt6.QtWidgets.QWidget.move')
 def test_mouse_move_movewin(move_mock, mouse_event_mock, view):
     view.movewin_active = True
+    view.mapToGlobal = lambda p: p
     view.event_start = QtCore.QPointF(10.0, 20.0)
     event = MagicMock()
     event.position.return_value = QtCore.QPointF(15.0, 18.0)
+    init_x, init_y = view.main_window.x(), view.main_window.y()
     view.mouseMoveEvent(event)
-    move_mock.assert_called_once_with(5, -2)
+    move_mock.assert_called_once_with(init_x + 5, init_y - 2)
     mouse_event_mock.assert_not_called()
     event.accept.assert_called_once_with()
 
