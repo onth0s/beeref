@@ -45,7 +45,9 @@ class MouseConfigBase:
         ('Not Configured', Qt.MouseButton.NoButton),
         ('Left', Qt.MouseButton.LeftButton),
         ('Middle',  Qt.MouseButton.MiddleButton),
+        ('Right', Qt.MouseButton.RightButton),
     ))
+
 
     def __eq__(self, other):
         return self.id == other.id
@@ -273,14 +275,6 @@ class KeyboardSettings(QtCore.QSettings):
             invertible=False,
         ),
         MouseConfig(
-            id='opacity2',
-            group='opacity (alternative)',
-            text='Change Opacity',
-            button='Not Configured',
-            modifiers=(),
-            invertible=False,
-        ),
-        MouseConfig(
             id='movewindow1',
             group='movewindow',
             text='Move Window',
@@ -288,15 +282,8 @@ class KeyboardSettings(QtCore.QSettings):
             modifiers=('Ctrl', 'Shift'),
             invertible=False,
         ),
-        MouseConfig(
-            id='movewindow2',
-            group='movewindow (alternative)',
-            text='Move Window',
-            button='Not Configured',
-            modifiers=(),
-            invertible=False,
-        ),
     ])
+
 
     def __init__(self):
         settings_format = QtCore.QSettings.Format.IniFormat

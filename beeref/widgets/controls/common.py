@@ -31,7 +31,8 @@ class MouseControlsEditorBase(QtWidgets.QDialog):
         super().__init__(parent)
         self.actions = actions
         self.action = self.actions[index.row()]
-        self.setWindowTitle(f'title {self.action.text}')
+        self.setWindowTitle(f'{title} {self.action.text}')
+
         self.old_modifiers = self.action.get_modifiers()
         self.remove_from_other = None
         self.ignore_on_changed = False

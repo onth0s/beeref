@@ -30,10 +30,11 @@ class ControlsDialog(QtWidgets.QDialog):
     def __init__(self, parent):
         super().__init__(parent)
         self.setWindowTitle('Keyboard & Mouse Controls')
-        tabs = QtWidgets.QTabWidget()
+        self.resize(650, 480)
+        tabs = QtWidgets.QTabWidget(self)
 
         # Keyboard shortcuts
-        keyboard = QtWidgets.QWidget(parent)
+        keyboard = QtWidgets.QWidget(tabs)
         kb_layout = QtWidgets.QVBoxLayout()
         keyboard.setLayout(kb_layout)
         table = KeyboardShortcutsView(keyboard)
@@ -45,7 +46,7 @@ class ControlsDialog(QtWidgets.QDialog):
         tabs.addTab(keyboard, '&Keyboard Shortcuts')
 
         # Mouse controls
-        mouse = QtWidgets.QWidget(parent)
+        mouse = QtWidgets.QWidget(tabs)
         mouse_layout = QtWidgets.QVBoxLayout()
         mouse.setLayout(mouse_layout)
         table = MouseView(mouse)
@@ -57,7 +58,7 @@ class ControlsDialog(QtWidgets.QDialog):
         tabs.addTab(mouse, '&Mouse')
 
         # Mouse wheel controls
-        mousewheel = QtWidgets.QWidget(parent)
+        mousewheel = QtWidgets.QWidget(tabs)
         wheel_layout = QtWidgets.QVBoxLayout()
         mousewheel.setLayout(wheel_layout)
         table = MouseWheelView(mousewheel)
@@ -71,6 +72,7 @@ class ControlsDialog(QtWidgets.QDialog):
         layout = QtWidgets.QVBoxLayout()
         self.setLayout(layout)
         layout.addWidget(tabs)
+
 
         # Bottom row of buttons
         buttons = QtWidgets.QDialogButtonBox(

@@ -238,6 +238,21 @@ class BeeSettings(QtCore.QSettings):
             self.setValue('path', filename)
         self.endArray()
 
+    def remove_recent_file(self, filename):
+        filename = os.path.abspath(filename)
+        values = self.get_recent_files()
+        values = [f for f in values if os.path.abspath(f) != filename]
+
+        self.remove('RecentFiles')
+        self.beginWriteArray('RecentFiles')
+        for i, path in enumerate(values[:10]):
+            self.setArrayIndex(i)
+            self.setValue('path', path)
+        self.endArray()
+
+    def clear_recent_files(self):
+        self.remove('RecentFiles')
+
     def get_recent_files(self, existing_only=False):
         values = []
         size = self.beginReadArray('RecentFiles')
@@ -249,3 +264,4 @@ class BeeSettings(QtCore.QSettings):
         if existing_only:
             values = [f for f in values if os.path.exists(f)]
         return values
+

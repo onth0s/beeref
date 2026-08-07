@@ -508,3 +508,19 @@ def test_keyboardsettings_mouse_action_for_event_empty(kbsettings):
     group, inverted = kbsettings.mouse_action_for_event(event)
     assert group is None
     assert inverted is None
+
+
+def test_no_duplicate_action_titles_in_mouse_actions():
+    """Guardrail test ensuring no duplicate action display texts exist in MOUSE_ACTIONS."""
+    titles = [action.text for action in KeyboardSettings.MOUSE_ACTIONS.values()]
+    duplicates = {t for t in titles if titles.count(t) > 1}
+    assert not duplicates, f"Duplicate mouse action titles found: {duplicates}"
+
+
+def test_no_duplicate_action_titles_in_mousewheel_actions():
+    """Guardrail test ensuring no duplicate action display texts exist in MOUSEWHEEL_ACTIONS."""
+    titles = [action.text for action in KeyboardSettings.MOUSEWHEEL_ACTIONS.values()]
+    duplicates = {t for t in titles if titles.count(t) > 1}
+    assert not duplicates, f"Duplicate mousewheel action titles found: {duplicates}"
+
+
