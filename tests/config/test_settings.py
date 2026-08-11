@@ -1,10 +1,9 @@
 import os
 import os.path
 import tempfile
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
-
 from PyQt6 import QtGui
 
 from beeref.config.settings import CommandlineArgs
@@ -131,14 +130,14 @@ def test_settings_restore_defaults_leaves_other_settings(settings):
 
 
 def test_settings_recent_files_get_empty(settings):
-    settings.get_recent_files() == []
+    assert settings.get_recent_files() == []
 
 
 def test_settings_recent_files_get_existing_only(settings):
     with tempfile.NamedTemporaryFile() as f:
         settings.update_recent_files('foo.bee')
         settings.update_recent_files(f.name)
-    settings.get_recent_files(existing_only=True) == [f.name]
+        assert settings.get_recent_files(existing_only=True) == [f.name]
 
 
 def test_settings_recent_files_update(settings):

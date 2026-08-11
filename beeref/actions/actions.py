@@ -13,15 +13,14 @@
 # You should have received a copy of the GNU General Public License
 # along with BeeRef.  If not, see <https://www.gnu.org/licenses/>.
 
-from functools import cached_property
 import logging
+from functools import cached_property
 
 from PyQt6 import QtGui
 
 from beeref.actions.menu_structure import menu_structure
 from beeref.config import KeyboardSettings, settings_events
 from beeref.utils import ActionList
-
 
 logger = logging.getLogger(__name__)
 
@@ -69,11 +68,10 @@ class Action:
                     if item == self.id:
                         path.append(menu_item['menu'])
                         return True
-                    if isinstance(item, dict):
+                    if isinstance(item, dict) and _get_path(item):
                         # This is a submenu
-                        if _get_path(item):
-                            path.append(menu_item['menu'])
-                            return True
+                        path.append(menu_item['menu'])
+                        return True
             elif menu_item['items'] == self.menu_id:
                 # This is a dynamic submenu (e.g. Recent Files)
                 path.append(menu_item['menu'])

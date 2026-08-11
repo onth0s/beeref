@@ -17,11 +17,11 @@ import argparse
 import logging
 import os
 import os.path
+from typing import ClassVar
 
 from PyQt6 import QtCore, QtGui
 
 from beeref import constants
-
 
 logger = logging.getLogger(__name__)
 
@@ -117,7 +117,7 @@ settings_events = BeeSettingsEvents()
 
 class BeeSettings(QtCore.QSettings):
 
-    FIELDS = {
+    FIELDS: ClassVar = {
         'Save/confirm_close_unsaved': {
             'default': True,
             'cast': bool,
@@ -198,9 +198,8 @@ class BeeSettings(QtCore.QSettings):
                 val = conf['cast'](val)
             except (ValueError, TypeError):
                 val = conf['default']
-        if 'validate' in conf:
-            if not conf['validate'](val):
-                val = conf['default']
+        if 'validate' in conf and not conf['validate'](val):
+            val = conf['default']
         return val
 
     def value_changed(self, key):
@@ -214,7 +213,7 @@ class BeeSettings(QtCore.QSettings):
         """
 
         logger.debug('Restoring settings to defaults')
-        for key in self.FIELDS.keys():
+        for key in self.FIELDS:
             self.remove(key)
         settings_events.restore_defaults.emit()
 

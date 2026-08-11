@@ -23,7 +23,6 @@ from beeref.config import BeeSettings
 from beeref.main_controls import MainControlsMixin
 from beeref.thumbnails import get_thumbnail
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -120,9 +119,9 @@ class RecentFileCard(QtWidgets.QFrame):
         self.remove_requested.emit(self.filepath)
 
     def mousePressEvent(self, event):
-        if event.button() == Qt.MouseButton.LeftButton:
-            if not self.close_btn.geometry().contains(event.position().toPoint()):
-                self.open_requested.emit(self.filepath)
+        if (event.button() == Qt.MouseButton.LeftButton
+                and not self.close_btn.geometry().contains(event.position().toPoint())):
+            self.open_requested.emit(self.filepath)
         super().mousePressEvent(event)
 
 

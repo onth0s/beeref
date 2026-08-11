@@ -19,7 +19,7 @@ def test_action_equals_true():
 def test_action_equals_false():
     action1 = Action(id='foo', text='Foo', shortcuts=['Ctrl+R'])
     action2 = Action(id='bar', text='Bar', shortcuts=['Ctrl+R'])
-    assert not action1 == action2
+    assert action1 != action2
 
 
 def test_action_on_restore_defaults(kbsettings, view):

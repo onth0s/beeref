@@ -13,21 +13,20 @@
 # You should have received a copy of the GNU General Public License
 # along with BeeRef.  If not, see <https://www.gnu.org/licenses/>.
 
-from importlib.resources import files as rsc_files
 import logging
+from importlib.resources import files as rsc_files
 
-from PyQt6 import QtCore, QtWidgets, QtGui
+from PyQt6 import QtCore, QtGui, QtWidgets
 from PyQt6.QtCore import Qt
 
-from beeref import constants, commands
+from beeref import commands, constants
 from beeref.config import logfile_name
 from beeref.widgets import (  # noqa: F401
+    color_gamut,
     controls,
     settings,
     welcome_overlay,
-    color_gamut,
 )
-
 
 logger = logging.getLogger(__name__)
 

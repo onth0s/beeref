@@ -12,7 +12,6 @@ import subprocess
 import sys
 from urllib import request
 
-
 parser = argparse.ArgumentParser(
     description=('Create JSON with Linux libs needed for BeeRef appimage'))
 parser.add_argument(
@@ -76,7 +75,7 @@ logger = logging.getLogger(__name__)
 logging.basicConfig(level=getattr(logging, args.loglevel))
 
 
-result = subprocess.run(('lsof', '-p', PID), capture_output=True)
+result = subprocess.run(('lsof', '-p', PID), capture_output=True, check=False)
 assert result.returncode == 0, result.stderr
 output = result.stdout.decode('utf-8')
 
@@ -126,7 +125,7 @@ for lib in iter_lsofoutput(output):
 
 
 for lib in libs:
-    result = subprocess.run(('apt-file', 'search', lib), capture_output=True)
+    result = subprocess.run(('apt-file', 'search', lib), capture_output=True, check=False)
     if result.returncode != 0:
         logger.warning(f'Fix manually: {lib}')
         continue
@@ -134,7 +133,7 @@ for lib in libs:
     pkgs = set()
     for line in output.splitlines():
         pkg = line.split(': ')[0]
-        if not (pkg.endswith('-dev') or pkg.endswith('-dbg')):
+        if not pkg.endswith(('-dev', '-dbg')):
             pkgs.add(pkg)
     if len(pkgs) == 1:
         pkg = pkgs.pop()

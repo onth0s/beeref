@@ -13,14 +13,14 @@
 # You should have received a copy of the GNU General Public License
 # along with BeeRef.  If not, see <https://www.gnu.org/licenses/>.
 
+import os.path
 from collections import defaultdict
 from functools import partial
-import os.path
 
 from PyQt6 import QtGui, QtWidgets
 
 from .actions import Action, actions
-from .menu_structure import menu_structure, MENU_SEPARATOR
+from .menu_structure import MENU_SEPARATOR, menu_structure
 
 
 class ActionsMixin:

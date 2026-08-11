@@ -25,7 +25,7 @@ from PyQt6 import QtCore, QtWidgets
 
 from beeref import constants
 from beeref.assets import BeeAssets
-from beeref.config import CommandlineArgs, BeeSettings, logfile_name
+from beeref.config import BeeSettings, CommandlineArgs, logfile_name
 from beeref.utils import create_palette_from_dict
 from beeref.view import BeeGraphicsView
 
@@ -115,7 +115,7 @@ def main():
     app = BeeRefApplication(sys.argv)
     palette = create_palette_from_dict(constants.COLORS)
     app.setPalette(palette)
-    bee = BeeRefMainWindow(app)  # NOQA:F841
+    bee = BeeRefMainWindow(app)
 
     signal.signal(signal.SIGINT, handle_sigint)
     # Repeatedly run python-noop to give the interpreter time to

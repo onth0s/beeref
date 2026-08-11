@@ -16,15 +16,13 @@
 import logging
 import os.path
 import tempfile
-from urllib.error import URLError
 from urllib import parse, request
-
-from PyQt6 import QtGui
+from urllib.error import URLError
 
 import exif
-from lxml import etree
 import plum
-
+from lxml import etree
+from PyQt6 import QtGui
 
 logger = logging.getLogger(__name__)
 
@@ -97,7 +95,7 @@ def load_image(path):
             page_data = request.urlopen(url).read()
             root = etree.HTML(page_data)
             url = root.xpath("//img")[0].get('src')
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug(f'Pinterest image download failed: {e}')
     try:
         imgdata = request.urlopen(url).read()

@@ -22,12 +22,10 @@ from PyQt6 import QtCore, QtGui, QtWidgets
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QGraphicsItem
 
+from beeref import commands, utils
 from beeref.assets import BeeAssets
-from beeref import commands
 from beeref.config import CommandlineArgs
 from beeref.constants import COLORS
-from beeref import utils
-
 
 commandline_args = CommandlineArgs()
 logger = logging.getLogger(__name__)
@@ -45,10 +43,9 @@ def with_anchor(func):
         # and then move the item accordingly to keep the anchor fixed
 
         anchor = kwargs.pop('anchor', None)
-        if not anchor:
-            if args and isinstance(args[-1], QtCore.QPointF):
-                anchor = args[-1]
-                args = args[:-1]
+        if not anchor and args and isinstance(args[-1], QtCore.QPointF):
+            anchor = args[-1]
+            args = args[:-1]
 
         anchor = anchor or QtCore.QPointF(0, 0)
         prev = self.mapToScene(anchor)

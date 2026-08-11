@@ -31,16 +31,18 @@ def get_cache_dir():
     return cache_dir
 
 
-def get_thumbnail(filepath, size=QtCore.QSize(180, 140)):
+def get_thumbnail(filepath, size=None):
     """Returns a QPixmap thumbnail for a given file (either .bee or image).
     Cached on disk using file modification time.
     """
+    if size is None:
+        size = QtCore.QSize(180, 140)
     if not os.path.exists(filepath):
         return None
 
     try:
         mtime = str(os.path.getmtime(filepath))
-        key = hashlib.md5(f'{filepath}_{mtime}'.encode('utf-8')).hexdigest()
+        key = hashlib.md5(f'{filepath}_{mtime}'.encode()).hexdigest()
         cache_path = os.path.join(get_cache_dir(), f'{key}.png')
 
         if os.path.exists(cache_path):

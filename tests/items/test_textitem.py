@@ -1,4 +1,4 @@
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 from PyQt6 import QtCore, QtWidgets
 from PyQt6.QtCore import Qt
@@ -68,7 +68,7 @@ def test_get_extra_save_data(qapp):
 def test_contains_when_inside_bounds(brect_mock, qapp):
     brect_mock.return_value = QtCore.QRectF(20, 30, 50, 50)
     item = BeeTextItem('foo bar')
-    item.contains(QtCore.QPointF(33, 45)) is True
+    assert item.contains(QtCore.QPointF(33, 45)) is True
     brect_mock.assert_called_once_with()
 
 
@@ -76,7 +76,7 @@ def test_contains_when_inside_bounds(brect_mock, qapp):
 def test_contains_when_outside_bounds(brect_mock, qapp):
     brect_mock.return_value = QtCore.QRectF(20, 30, 50, 50)
     item = BeeTextItem('foo bar')
-    item.contains(QtCore.QPointF(19, 29)) is False
+    assert item.contains(QtCore.QPointF(19, 29)) is False
     brect_mock.assert_called_once_with()
 
 
@@ -97,14 +97,14 @@ def test_has_selection_outline_when_not_selected(view):
     item = BeeTextItem('foo bar')
     view.scene.addItem(item)
     item.setSelected(False)
-    item.has_selection_outline() is False
+    assert item.has_selection_outline() is False
 
 
 def test_has_selection_outline_when_selected(view):
     item = BeeTextItem('foo bar')
     view.scene.addItem(item)
     item.setSelected(True)
-    item.has_selection_outline() is True
+    assert item.has_selection_outline() is True
 
 
 def test_has_selection_handles_when_not_selected(view):
@@ -114,7 +114,7 @@ def test_has_selection_handles_when_not_selected(view):
     item2 = BeeTextItem('baz')
     view.scene.addItem(item2)
     item2.setSelected(False)
-    item.has_selection_handles() is False
+    assert item.has_selection_handles() is False
 
 
 def test_has_selection_handles_when_selected_single(view):
@@ -124,7 +124,7 @@ def test_has_selection_handles_when_selected_single(view):
     item2 = BeeTextItem('baz')
     view.scene.addItem(item2)
     item2.setSelected(False)
-    item.has_selection_handles() is True
+    assert item.has_selection_handles() is True
 
 
 def test_has_selection_handles_when_selected_multi(view):
@@ -134,18 +134,18 @@ def test_has_selection_handles_when_selected_multi(view):
     item2 = BeeTextItem('baz')
     view.scene.addItem(item2)
     item2.setSelected(True)
-    item.has_selection_handles() is False
+    assert item.has_selection_handles() is False
 
 
 def test_has_selection_handles_when_selected_single_and_edit_mode(view):
     item = BeeTextItem('foo bar')
-    item.edit_mode = False
+    item.edit_mode = True
     view.scene.addItem(item)
     item.setSelected(True)
     item2 = BeeTextItem('baz')
     view.scene.addItem(item2)
     item2.setSelected(False)
-    item.has_selection_handles() is False
+    assert item.has_selection_handles() is False
 
 
 def test_selection_action_items(qapp):
@@ -187,7 +187,7 @@ def test_update_from_data_keeps_unset_values(qapp):
 
 def test_create_from_data(qapp):
     item = BeeTextItem.create_from_data(data={'text': 'hello world'})
-    item.toPlainText() == 'hello world'
+    assert item.toPlainText() == 'hello world'
 
 
 def test_create_copy(qapp):

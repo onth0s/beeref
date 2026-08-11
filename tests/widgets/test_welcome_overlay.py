@@ -3,7 +3,6 @@ from unittest.mock import MagicMock, patch
 from PyQt6 import QtWidgets
 
 from beeref.config import BeeSettings
-
 from beeref.view import BeeGraphicsView
 from beeref.widgets.welcome_overlay import (
     RecentFileCard,

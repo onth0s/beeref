@@ -15,11 +15,10 @@
 # You should have received a copy of the GNU General Public License
 # along with BeeRef.  If not, see <https://www.gnu.org/licenses/>.
 
-from importlib.resources import files as rsc_files
 import logging
+from importlib.resources import files as rsc_files
 
 from PyQt6 import QtGui, QtWidgets
-
 
 logger = logging.getLogger(__name__)
 

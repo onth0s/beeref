@@ -18,7 +18,6 @@ import shutil
 import subprocess
 from urllib.request import urlretrieve
 
-
 parser = argparse.ArgumentParser(
     description=('Create an appimage for BeeRef. '
                  'Run from the git root directory.'))
@@ -60,7 +59,7 @@ logging.basicConfig(level=getattr(logging, args.loglevel))
 
 def run_command(*args, capture_output=False):
     logger.info(f'Running command: {args}')
-    result = subprocess.run(args, capture_output=capture_output)
+    result = subprocess.run(args, capture_output=capture_output, check=False)
     assert result.returncode == 0, f'Failed with exit code {result.returncode}'
 
 

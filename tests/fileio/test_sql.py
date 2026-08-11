@@ -4,13 +4,13 @@ import os.path
 import stat
 from unittest.mock import MagicMock, patch
 
-from PyQt6 import QtCore, QtGui
 import pytest
+from PyQt6 import QtCore, QtGui
 
-from beeref.fileio import schema, is_bee_file
+from beeref.fileio import is_bee_file, schema
 from beeref.fileio.errors import BeeFileIOError
 from beeref.fileio.sql import SQLiteIO
-from beeref.items import BeePixmapItem, BeeTextItem, BeeErrorItem
+from beeref.items import BeeErrorItem, BeePixmapItem, BeeTextItem
 
 
 @pytest.mark.parametrize('filename,expected',
@@ -23,7 +23,7 @@ def test_is_bee_file(filename, expected):
 
 def test_sqliteio_migrate_does_nothing_when_version_ok(tmpfile):
     io = SQLiteIO(tmpfile, MagicMock(), create_new=True)
-    io.ex('PRAGMA user_version=%s' % schema.USER_VERSION)
+    io.ex(f'PRAGMA user_version={schema.USER_VERSION}')
     io.connection.commit()
     del io
     with patch('beeref.fileio.sql.SQLiteIO.ex') as ex_mock:
@@ -186,7 +186,7 @@ def test_sqliteio_readonly_doesnt_allow_write(view, tmpfile):
 
     assert exinfo.value.filename == tmpfile
     with open(tmpfile, 'r') as f:
-        f.read() == 'foobar'
+        assert f.read() == 'foobar'
 
 
 def test_sqliteio_write_calls_create_schema_on_new(tmpfile, view):
@@ -200,11 +200,10 @@ def test_sqliteio_write_calls_create_schema_on_new(tmpfile, view):
 
 def test_sqliteio_write_calls_write_meta(tmpfile, view):
     io = SQLiteIO(tmpfile, view.scene, create_new=True)
-    with patch.object(io, 'write_meta') as metamock:
-        with patch.object(io, 'fetchall'):
-            with patch.object(io, 'exmany'):
-                io.write()
-                metamock.assert_called_once()
+    with patch.object(io, 'write_meta') as metamock, patch.object(io, 'fetchall'):
+        with patch.object(io, 'exmany'):
+            io.write()
+            metamock.assert_called_once()
 
 
 def test_sqliteio_write_inserts_new_text_item(tmpfile, view):

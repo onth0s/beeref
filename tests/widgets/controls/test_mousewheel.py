@@ -1,16 +1,16 @@
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
-from PyQt6 import QtWidgets, QtCore
+from PyQt6 import QtCore, QtWidgets
 from PyQt6.QtCore import Qt
 
 from beeref.config.controls import MouseWheelConfig
+from beeref.utils import ActionList
 from beeref.widgets.controls.mousewheel import (
     MouseWheelDelegate,
-    MouseWheelModifiersEditor,
     MouseWheelModel,
+    MouseWheelModifiersEditor,
     MouseWheelProxy,
 )
-from beeref.utils import ActionList
 
 
 def test_mousewheel_editor_inits_modifiers_when_not_configured(view):
@@ -141,7 +141,7 @@ def test_mousewheel_editor_get_modifiers(view):
             view, index=MagicMock(row=MagicMock(return_value=0)))
 
     editor.checkboxes['Alt'].setChecked(True)
-    editor.get_modifiers() == ['Alt']
+    assert editor.get_modifiers() == ['Alt']
 
 
 def test_mousewheel_editor_get_modifiers_when_no_modifiers(view):
@@ -159,7 +159,7 @@ def test_mousewheel_editor_get_modifiers_when_no_modifiers(view):
     editor.ignore_on_changed = True
     editor.checkboxes['No Modifier'].setChecked(True)
     editor.checkboxes['Alt'].setChecked(True)
-    editor.get_modifiers() == ['No Modifier']
+    assert editor.get_modifiers() == ['No Modifier']
 
 
 def test_mousewheel_editor_get_modifiers_when_no_modifiers_cleaned_false(view):
@@ -380,7 +380,7 @@ def test_mousewheel_delegate_setmodeldata(view):
 
 def test_mousewheel_model_columncount():
     model = MouseWheelModel()
-    model.columnCount(None) == 3
+    assert model.columnCount(None) == 4
 
 
 def test_mousewheel_model_rowcount():
@@ -400,7 +400,7 @@ def test_mousewheel_model_rowcount():
     with patch('beeref.config.controls.KeyboardSettings.MOUSEWHEEL_ACTIONS',
                ActionList([a1, a2])):
         model = MouseWheelModel()
-        model.rowCount(None) == 2
+        assert model.rowCount(None) == 2
 
 
 def test_mousewheel_model_headerdata():
@@ -931,11 +931,11 @@ def test_mousewheel_proxy_setdata_saves_correct_filtered_index():
 
     proxy.setFilterFixedString('b')
     proxy.setData(
-        index=proxy.index(1, 3),
-        value={'modifiers': ['Ctrl', 'Alt']},
+        index=proxy.index(1, 2),
+        value=['Ctrl', 'Alt'],
         role=None)
 
-    a3.get_modifiers() == ['Ctrl', 'Alt']
+    assert a3.get_modifiers() == ['Ctrl', 'Alt']
 
 
 def test_mousewheel_proxy_setdata_remove_from_other():
@@ -957,10 +957,10 @@ def test_mousewheel_proxy_setdata_remove_from_other():
         proxy = MouseWheelProxy()
 
     proxy.setData(
-        index=proxy.index(0, 3),
-        value={'modifiers': ['Ctrl', 'Alt']},
+        index=proxy.index(1, 2),
+        value=['Ctrl', 'Alt'],
         role=None,
         remove_from_other=a2)
 
-    a1.get_modifiers() == ['Ctrl', 'Alt']
-    a2.get_modifiers() == []
+    assert a1.get_modifiers() == ['Ctrl', 'Alt']
+    assert a2.get_modifiers() == []

@@ -34,10 +34,10 @@ import tempfile
 from PyQt6 import QtGui
 
 from beeref import constants
-from beeref.items import BeePixmapItem, BeeErrorItem
-from .errors import BeeFileIOError, IMG_LOADING_ERROR_MSG
-from .schema import SCHEMA, USER_VERSION, MIGRATIONS, APPLICATION_ID
+from beeref.items import BeeErrorItem, BeePixmapItem
 
+from .errors import IMG_LOADING_ERROR_MSG, BeeFileIOError
+from .schema import APPLICATION_ID, MIGRATIONS, SCHEMA, USER_VERSION
 
 logger = logging.getLogger(__name__)
 
@@ -131,7 +131,7 @@ class SQLiteIO:
         if self.readonly:
             try:
                 # See whether file is writable so we can migrate it directly
-                self.ex('PRAGMA application_id=%s' % APPLICATION_ID)
+                self.ex(f'PRAGMA application_id={APPLICATION_ID}')
             except sqlite3.Error:
                 logger.debug('File not writable; use temporary copy instead')
                 self._connection.close()
@@ -178,8 +178,8 @@ class SQLiteIO:
         return self.cursor.fetchall()
 
     def write_meta(self):
-        self.ex('PRAGMA application_id=%s' % APPLICATION_ID)
-        self.ex('PRAGMA user_version=%s' % USER_VERSION)
+        self.ex(f'PRAGMA application_id={APPLICATION_ID}')
+        self.ex(f'PRAGMA user_version={USER_VERSION}')
         self.ex('PRAGMA foreign_keys=ON')
 
     def create_schema_on_new(self):

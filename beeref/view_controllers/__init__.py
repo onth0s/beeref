@@ -13,6 +13,9 @@
 # You should have received a copy of the GNU General Public License
 # along with BeeRef.  If not, see <https://www.gnu.org/licenses/>.
 
-from .mixin import ActionsMixin
+"""Controllers and mixins for BeeGraphicsView."""
 
-__all__ = ['ActionsMixin']
+from .mode_controller import ModeMixin
+from .transform_controller import TransformMixin
+
+__all__ = ['ModeMixin', 'TransformMixin']

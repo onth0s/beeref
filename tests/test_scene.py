@@ -1,11 +1,10 @@
 import math
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
-from pytest import approx
-
 from PyQt6 import QtCore, QtGui, QtWidgets
 from PyQt6.QtCore import Qt
+from pytest import approx
 
 from beeref import commands
 from beeref.items import BeePixmapItem, BeeTextItem
@@ -112,11 +111,11 @@ def test_normalize_height(view):
     item2.setScale(3)
     view.scene.cancel_crop_mode = MagicMock()
 
-    with patch.object(item1, 'bounding_rect_unselected',
-                      return_value=QtCore.QRectF(0, 0, 100, 80)):
-        with patch.object(item2, 'bounding_rect_unselected',
-                          return_value=QtCore.QRectF(0, 0, 100, 80)):
-            view.scene.normalize_height()
+    with (
+        patch.object(item1, 'bounding_rect_unselected', return_value=QtCore.QRectF(0, 0, 100, 80)),
+        patch.object(item2, 'bounding_rect_unselected', return_value=QtCore.QRectF(0, 0, 100, 80)),
+    ):
+        view.scene.normalize_height()
 
     assert item1.scale() == 2
     assert item1.pos() == QtCore.QPointF(-50, -40)
@@ -135,11 +134,11 @@ def test_normalize_height_with_rotation(view):
     item2.setRotation(90)
     view.scene.cancel_crop_mode = MagicMock()
 
-    with patch.object(item1, 'bounding_rect_unselected',
-                      return_value=QtCore.QRectF(0, 0, 100, 200)):
-        with patch.object(item2, 'bounding_rect_unselected',
-                          return_value=QtCore.QRectF(0, 0, 100, 200)):
-            view.scene.normalize_height()
+    with (
+        patch.object(item1, 'bounding_rect_unselected', return_value=QtCore.QRectF(0, 0, 100, 200)),
+        patch.object(item2, 'bounding_rect_unselected', return_value=QtCore.QRectF(0, 0, 100, 200)),
+    ):
+        view.scene.normalize_height()
 
     assert item1.scale() == 0.75
     assert item2.scale() == 1.5
@@ -162,11 +161,11 @@ def test_normalize_width(view):
     item2.setScale(3)
     view.scene.cancel_crop_mode = MagicMock()
 
-    with patch.object(item1, 'bounding_rect_unselected',
-                      return_value=QtCore.QRectF(0, 0, 80, 100)):
-        with patch.object(item2, 'bounding_rect_unselected',
-                          return_value=QtCore.QRectF(0, 0, 80, 100)):
-            view.scene.normalize_width()
+    with (
+        patch.object(item1, 'bounding_rect_unselected', return_value=QtCore.QRectF(0, 0, 80, 100)),
+        patch.object(item2, 'bounding_rect_unselected', return_value=QtCore.QRectF(0, 0, 80, 100)),
+    ):
+        view.scene.normalize_width()
 
     assert item1.scale() == 2
     assert item1.pos() == QtCore.QPointF(-40, -50)
@@ -185,11 +184,11 @@ def test_normalize_width_with_rotation(view):
     item2.setRotation(90)
     view.scene.cancel_crop_mode = MagicMock()
 
-    with patch.object(item1, 'bounding_rect_unselected',
-                      return_value=QtCore.QRectF(0, 0, 200, 100)):
-        with patch.object(item2, 'bounding_rect_unselected',
-                          return_value=QtCore.QRectF(0, 0, 200, 100)):
-            view.scene.normalize_height()
+    with (
+        patch.object(item1, 'bounding_rect_unselected', return_value=QtCore.QRectF(0, 0, 200, 100)),
+        patch.object(item2, 'bounding_rect_unselected', return_value=QtCore.QRectF(0, 0, 200, 100)),
+    ):
+        view.scene.normalize_height()
 
     assert item1.scale() == 1.5
     assert item2.scale() == 0.75
@@ -212,11 +211,11 @@ def test_normalize_size(view):
     item2.setScale(2)
     view.scene.cancel_crop_mode = MagicMock()
 
-    with patch.object(item1, 'bounding_rect_unselected',
-                      return_value=QtCore.QRectF(0, 0, 100, 100)):
-        with patch.object(item2, 'bounding_rect_unselected',
-                          return_value=QtCore.QRectF(0, 0, 100, 100)):
-            view.scene.normalize_size()
+    with (
+        patch.object(item1, 'bounding_rect_unselected', return_value=QtCore.QRectF(0, 0, 100, 100)),
+        patch.object(item2, 'bounding_rect_unselected', return_value=QtCore.QRectF(0, 0, 100, 100)),
+    ):
+        view.scene.normalize_size()
 
     assert item1.scale() == approx(math.sqrt(2.5))
     assert item2.scale() == approx(math.sqrt(2.5))
@@ -233,11 +232,11 @@ def test_normalize_size_with_rotation(view):
     item2.setRotation(90)
     view.scene.cancel_crop_mode = MagicMock()
 
-    with patch.object(item1, 'bounding_rect_unselected',
-                      return_value=QtCore.QRectF(0, 0, 100, 200)):
-        with patch.object(item2, 'bounding_rect_unselected',
-                          return_value=QtCore.QRectF(0, 0, 100, 200)):
-            view.scene.normalize_size()
+    with (
+        patch.object(item1, 'bounding_rect_unselected', return_value=QtCore.QRectF(0, 0, 100, 200)),
+        patch.object(item2, 'bounding_rect_unselected', return_value=QtCore.QRectF(0, 0, 100, 200)),
+    ):
+        view.scene.normalize_size()
 
     assert item1.scale() == 1
     assert item2.scale() == 1
@@ -373,11 +372,11 @@ def test_arrange_when_rotated(view):
     item2.setRotation(90)
     view.scene.cancel_crop_mode = MagicMock()
 
-    with patch.object(item1, 'bounding_rect_unselected',
-                      return_value=QtCore.QRectF(0, 0, 100, 80)):
-        with patch.object(item2, 'bounding_rect_unselected',
-                          return_value=QtCore.QRectF(0, 0, 100, 80)):
-            view.scene.arrange()
+    with (
+        patch.object(item1, 'bounding_rect_unselected', return_value=QtCore.QRectF(0, 0, 100, 80)),
+        patch.object(item2, 'bounding_rect_unselected', return_value=QtCore.QRectF(0, 0, 100, 80)),
+    ):
+        view.scene.arrange()
 
     assert item2.pos() == QtCore.QPointF(-40, -30)
     assert item1.pos() == QtCore.QPointF(40, -30)
@@ -982,10 +981,10 @@ def test_mouse_move_event_when_rubberband_new(
 
     view.scene.addItem.assert_called_once_with(view.scene.rubberband_item)
     view.scene.rubberband_item.bring_to_front.assert_called_once()
-    view.scene.rubberband_item.rect().topLeft().x() == 0
-    view.scene.rubberband_item.rect().topLeft().y() == 0
-    view.scene.rubberband_item.rect().bottomRight().x() == 10
-    view.scene.rubberband_item.rect().bottomRight().y() == 20
+    assert view.scene.rubberband_item.rect().topLeft().x() == 0
+    assert view.scene.rubberband_item.rect().topLeft().y() == 0
+    assert view.scene.rubberband_item.rect().bottomRight().x() == 10
+    assert view.scene.rubberband_item.rect().bottomRight().y() == 20
     assert item.isSelected() is True
     mouse_mock.assert_called_once_with(event)
 
@@ -1006,10 +1005,10 @@ def test_mouse_move_event_when_rubberband_not_new(
 
     view.scene.addItem.assert_not_called()
     view.scene.rubberband_item.bring_to_front.assert_not_called()
-    view.scene.rubberband_item.rect().topLeft().x() == 0
-    view.scene.rubberband_item.rect().topLeft().y() == 0
-    view.scene.rubberband_item.rect().bottomRight().x() == 10
-    view.scene.rubberband_item.rect().bottomRight().y() == 20
+    assert view.scene.rubberband_item.rect().topLeft().x() == 0
+    assert view.scene.rubberband_item.rect().topLeft().y() == 0
+    assert view.scene.rubberband_item.rect().bottomRight().x() == 10
+    assert view.scene.rubberband_item.rect().bottomRight().y() == 20
     assert item.isSelected() is True
     mouse_mock.assert_called_once_with(event)
 
@@ -1028,10 +1027,10 @@ def test_mouse_move_event_when_no_rubberband(mouse_mock, view, imgfilename3x3):
 
     view.scene.addItem.assert_not_called()
     view.scene.rubberband_item.bring_to_front.assert_not_called()
-    view.scene.rubberband_item.rect().topLeft().x() == 0
-    view.scene.rubberband_item.rect().topLeft().y() == 0
-    view.scene.rubberband_item.rect().bottomRight().x() == 0
-    view.scene.rubberband_item.rect().bottomRight().y() == 0
+    assert view.scene.rubberband_item.rect().topLeft().x() == 0
+    assert view.scene.rubberband_item.rect().topLeft().y() == 0
+    assert view.scene.rubberband_item.rect().bottomRight().x() == 0
+    assert view.scene.rubberband_item.rect().bottomRight().y() == 0
     assert item.isSelected() is False
     mouse_mock.assert_called_once_with(event)
 
@@ -1045,7 +1044,7 @@ def test_mouse_release_event_when_rubberband_active(mouse_mock, view):
 
     view.scene.mouseReleaseEvent(event)
     view.scene.removeItem.assert_called_once_with(view.scene.rubberband_item)
-    view.scene.active_mode is None
+    assert view.scene.active_mode is None
 
 
 @patch('PyQt6.QtWidgets.QGraphicsScene.mouseReleaseEvent')
@@ -1215,11 +1214,11 @@ def test_items_bounding_rect_given_items(view):
     item3.setSelected(True)
     item3.setPos(1000, 1000)
 
-    with patch.object(item1, 'bounding_rect_unselected',
-                      return_value=QtCore.QRectF(0, 0, 100, 100)):
-        with patch.object(item2, 'bounding_rect_unselected',
-                          return_value=QtCore.QRectF(0, 0, 100, 100)):
-            rect = view.scene.itemsBoundingRect(items=[item1, item2])
+    with (
+        patch.object(item1, 'bounding_rect_unselected', return_value=QtCore.QRectF(0, 0, 100, 100)),
+        patch.object(item2, 'bounding_rect_unselected', return_value=QtCore.QRectF(0, 0, 100, 100)),
+    ):
+        rect = view.scene.itemsBoundingRect(items=[item1, item2])
 
     assert rect.topLeft().x() == -33
     assert rect.topLeft().y() == -6
@@ -1241,11 +1240,11 @@ def test_items_bounding_rect_two_items_selection_only(view):
     item3.setSelected(False)
     item3.setPos(1000, 1000)
 
-    with patch.object(item1, 'bounding_rect_unselected',
-                      return_value=QtCore.QRectF(0, 0, 100, 100)):
-        with patch.object(item2, 'bounding_rect_unselected',
-                          return_value=QtCore.QRectF(0, 0, 100, 100)):
-            rect = view.scene.itemsBoundingRect(selection_only=True)
+    with (
+        patch.object(item1, 'bounding_rect_unselected', return_value=QtCore.QRectF(0, 0, 100, 100)),
+        patch.object(item2, 'bounding_rect_unselected', return_value=QtCore.QRectF(0, 0, 100, 100)),
+    ):
+        rect = view.scene.itemsBoundingRect(selection_only=True)
 
     assert rect.topLeft().x() == -33
     assert rect.topLeft().y() == -6

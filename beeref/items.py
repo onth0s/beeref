@@ -17,10 +17,10 @@
 text).
 """
 
-from collections import defaultdict
-from functools import cached_property
 import logging
 import os.path
+from collections import defaultdict
+from functools import cached_property
 
 from PyQt6 import QtCore, QtGui, QtWidgets
 from PyQt6.QtCore import Qt
@@ -29,7 +29,6 @@ from beeref import commands
 from beeref.config import BeeSettings
 from beeref.constants import COLORS
 from beeref.selection import SelectableMixin
-
 
 logger = logging.getLogger(__name__)
 
@@ -800,7 +799,6 @@ class BeeErrorItem(BeeItemMixin, QtWidgets.QGraphicsTextItem):
     def do_flip(self, *args, **kwargs):
         """Flips the item."""
         # Never flip error messages
-        pass
 
     def copy_to_clipboard(self, clipboard):
         clipboard.setText(self.toPlainText())

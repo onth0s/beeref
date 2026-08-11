@@ -1,6 +1,6 @@
 from PyQt6 import QtGui
 
-from beeref.items import sort_by_filename, BeePixmapItem, BeeTextItem
+from beeref.items import BeePixmapItem, BeeTextItem, sort_by_filename
 
 
 def test_sort_by_filename(view):

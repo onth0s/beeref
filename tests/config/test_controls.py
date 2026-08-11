@@ -1,4 +1,4 @@
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 from PyQt6.QtCore import Qt
 
@@ -293,7 +293,7 @@ def test_mouseconfig_controls_changed_false():
     action = MouseConfig(
         id='foo', group='foobar', text='Foo', button='Middle',
         modifiers=['Shift'], invertible=True)
-    action.controls_changed() is False
+    assert action.controls_changed() is False
 
 
 def test_mouseconfig_controls_changed_true_when_button_changed():
@@ -301,7 +301,7 @@ def test_mouseconfig_controls_changed_true_when_button_changed():
         id='foo', group='foobar', text='Foo', button='Middle',
         modifiers=['Shift'], invertible=True)
     action.set_button('Left')
-    action.controls_changed() is True
+    assert action.controls_changed() is True
 
 
 def test_mouseconfig_controls_changed_true_when_modifiers_changed():
@@ -309,7 +309,7 @@ def test_mouseconfig_controls_changed_true_when_modifiers_changed():
         id='foo', group='foobar', text='Foo', button='Middle',
         modifiers=['Shift'], invertible=True)
     action.set_modifiers(['Shift', 'Ctrl'])
-    action.controls_changed() is True
+    assert action.controls_changed() is True
 
 
 def test_mouseconfig_controls_changed_true_when_inverted_changed():
@@ -317,7 +317,7 @@ def test_mouseconfig_controls_changed_true_when_inverted_changed():
         id='foo', group='foobar', text='Foo', button='Middle',
         modifiers=['Shift'], invertible=True)
     action.set_inverted(True)
-    action.controls_changed() is True
+    assert action.controls_changed() is True
 
 
 def test_mouseconfig_remove_controls():

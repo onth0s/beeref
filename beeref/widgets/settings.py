@@ -13,15 +13,14 @@
 # You should have received a copy of the GNU General Public License
 # along with BeeRef.  If not, see <https://www.gnu.org/licenses/>.
 
-from functools import partial
 import logging
+from functools import partial
 
 from PyQt6 import QtWidgets
 from PyQt6.QtCore import Qt
 
 from beeref import constants
 from beeref.config import BeeSettings, settings_events
-
 
 logger = logging.getLogger(__name__)
 

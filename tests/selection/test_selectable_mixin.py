@@ -1,12 +1,12 @@
 import math
-from pytest import approx, mark
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 from PyQt6 import QtCore, QtGui
 from PyQt6.QtCore import Qt
+from pytest import approx, mark
 
-from beeref.assets import BeeAssets
 from beeref import commands
+from beeref.assets import BeeAssets
 from beeref.items import BeePixmapItem
 
 
@@ -659,8 +659,7 @@ def test_hover_move_event_small_item_inside_handle_free_center(view, item):
                    ((0, 80), True, 45, 'SizeHorCursor'),
                    ((0, 0), True, 135, 'SizeHorCursor'),
                    ((0, 0), True, 45, 'SizeVerCursor'),
-                   ((0, 0), True, 90, 'SizeFDiagCursor'),
-                   ((0, 0), True, 135, 'SizeHorCursor')])
+                   ((0, 0), True, 90, 'SizeFDiagCursor')])
 def test_hover_move_event_scale(
         pos, flipped, rotation, expected, view, item):
     view.scene.addItem(item)
@@ -984,7 +983,7 @@ def test_mouse_release_event_when_no_action(view, item):
                '.mouseReleaseEvent') as m:
         item.mouseReleaseEvent(event)
         m.assert_called_once_with(event)
-        item.active_mode is None
+        assert item.active_mode is None
         event.accept.assert_not_called()
 
 

@@ -32,6 +32,8 @@ beeref = "beeref.__main__:main"
 [project.urls]
 Homepage = "https://beeref.org/"
 Repository = "https://github.com/rbreu/beeref"
-# Documentation =
 Issues = "https://github.com/rbreu/beeref/issues"
 Changelog = "https://github.com/rbreu/beeref/blob/main/CHANGELOG.rst"
+
+[tool.ruff.lint]
+ignore = ["SIM117", "SIM115", "B018"]

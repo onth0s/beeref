@@ -22,7 +22,6 @@ from beeref.widgets.controls.keyboard import KeyboardShortcutsView
 from beeref.widgets.controls.mouse import MouseView
 from beeref.widgets.controls.mousewheel import MouseWheelView
 
-
 logger = logging.getLogger(__name__)
 
 

@@ -1,5 +1,5 @@
 import os.path
-from unittest.mock import patch, MagicMock, call
+from unittest.mock import MagicMock, call, patch
 
 from PyQt6 import QtWidgets
 

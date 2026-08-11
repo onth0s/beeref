@@ -13,10 +13,10 @@
 # You should have received a copy of the GNU General Public License
 # along with BeeRef.  If not, see <https://www.gnu.org/licenses/>.
 
-from functools import partial
 import logging
+from functools import partial
 
-from PyQt6 import QtWidgets, QtCore
+from PyQt6 import QtCore, QtWidgets
 
 from beeref.config import KeyboardSettings, settings_events
 from beeref.config.controls import MouseWheelConfig
@@ -24,7 +24,6 @@ from beeref.widgets.controls.common import (
     MouseControlsEditorBase,
     MouseControlsModelBase,
 )
-
 
 logger = logging.getLogger(__name__)
 

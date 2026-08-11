@@ -1,4 +1,4 @@
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 from PyQt6 import QtCore, QtGui
 from PyQt6.QtCore import Qt
@@ -25,12 +25,12 @@ def test_paint():
 
 def test_has_selection_outline():
     item = MultiSelectItem()
-    item.has_selection_outline() is True
+    assert item.has_selection_outline() is True
 
 
 def test_has_selection_handles():
     item = MultiSelectItem()
-    item.has_selection_handles() is True
+    assert item.has_selection_handles() is True
 
 
 def test_selection_action_items(view):

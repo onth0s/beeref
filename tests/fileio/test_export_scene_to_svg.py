@@ -1,13 +1,13 @@
 import os
 import stat
 from unittest.mock import MagicMock
+
 import pytest
+from PyQt6 import QtCore, QtGui
 
-from PyQt6 import QtGui, QtCore
-
-from beeref.items import BeePixmapItem, BeeTextItem
 from beeref.fileio.errors import BeeFileIOError
 from beeref.fileio.export import SceneToSVGExporter
+from beeref.items import BeePixmapItem, BeeTextItem
 
 
 def test_scene_to_svg_exporter_get_user_input(view):
@@ -259,7 +259,7 @@ def test_scene_to_svg_exporter_export_with_worker_canceled(view, tmpdir):
     worker.begin_processing.emit.assert_called_once_with(1)
     worker.progress.emit.assert_called_once_with(0)
     worker.finished.emit.assert_called_once_with(filename, [])
-    os.path.exists(filename) is False
+    assert os.path.exists(filename) is False
 
 
 def test_scene_to_svg_exporter_export_when_file_not_writeable_with_worker(

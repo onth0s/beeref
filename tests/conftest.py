@@ -1,9 +1,8 @@
 import os.path
-import pytest
 import uuid
-
 from unittest.mock import MagicMock, patch
 
+import pytest
 from PyQt6 import QtGui, QtWidgets
 
 

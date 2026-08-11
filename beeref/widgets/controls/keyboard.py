@@ -16,12 +16,11 @@
 
 import logging
 
-from PyQt6 import QtWidgets, QtCore
+from PyQt6 import QtCore, QtWidgets
 
 from beeref import constants
 from beeref.actions.actions import actions
 from beeref.config import KeyboardSettings, settings_events
-
 
 logger = logging.getLogger(__name__)
 

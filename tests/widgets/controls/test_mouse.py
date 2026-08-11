@@ -1,16 +1,16 @@
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
-from PyQt6 import QtWidgets, QtCore
+from PyQt6 import QtCore, QtWidgets
 from PyQt6.QtCore import Qt
 
 from beeref.config.controls import MouseConfig
+from beeref.utils import ActionList
 from beeref.widgets.controls.mouse import (
-    MouseDelegate,
     MouseControlsEditor,
+    MouseDelegate,
     MouseModel,
     MouseProxy,
 )
-from beeref.utils import ActionList
 
 
 def test_mouse_editor_inits_buttons_and_modifiers_when_not_configured(view):
@@ -155,7 +155,7 @@ def test_mouse_editor_get_modifiers(view):
             view, index=MagicMock(row=MagicMock(return_value=0)))
 
     editor.checkboxes['Alt'].setChecked(True)
-    editor.get_modifiers() == ['Alt']
+    assert editor.get_modifiers() == ['Alt']
 
 
 def test_mouse_editor_get_modifiers_when_no_modifiers(view):
@@ -174,7 +174,7 @@ def test_mouse_editor_get_modifiers_when_no_modifiers(view):
     editor.ignore_on_changed = True
     editor.checkboxes['No Modifier'].setChecked(True)
     editor.checkboxes['Alt'].setChecked(True)
-    editor.get_modifiers() == ['No Modifier']
+    assert editor.get_modifiers() == ['No Modifier']
 
 
 def test_mouse_editor_get_modifiers_when_not_configured_cleaned(view):
@@ -265,7 +265,7 @@ def test_mouse_editor_on_button_changed_when_button(view):
         if key == 'No Modifier':
             assert checkbox.isChecked() is True
         else:
-            checkbox.isChecked() is False
+            assert checkbox.isChecked() is False
 
 
 def test_mouse_editor_on_button_changed_when_no_button(view):
@@ -567,7 +567,7 @@ def test_mouse_delegate_setmodeldata(view):
 
 def test_mouse_model_columncount():
     model = MouseModel()
-    model.columnCount(None) == 4
+    assert model.columnCount(None) == 5
 
 
 def test_mouse_model_rowcount():
@@ -589,7 +589,7 @@ def test_mouse_model_rowcount():
     with patch('beeref.config.controls.KeyboardSettings.MOUSE_ACTIONS',
                ActionList([a1, a2])):
         model = MouseModel()
-        model.rowCount(None) == 2
+        assert model.rowCount(None) == 2
 
 
 def test_mouse_model_headerdata():
@@ -1222,8 +1222,8 @@ def test_mouse_proxy_setdata_saves_correct_filtered_index():
         value={'button': 'Left', 'modifiers': ['Ctrl', 'Alt']},
         role=None)
 
-    a3.get_button() == 'Left'
-    a3.get_modifiers() == ['Ctrl', 'Alt']
+    assert a3.get_button() == 'Left'
+    assert a3.get_modifiers() == ['Ctrl', 'Alt']
 
 
 def test_mouse_proxy_setdata_remove_from_other():
@@ -1247,12 +1247,12 @@ def test_mouse_proxy_setdata_remove_from_other():
         proxy = MouseProxy()
 
     proxy.setData(
-        index=proxy.index(0, 3),
+        index=proxy.index(1, 3),
         value={'button': 'Left', 'modifiers': ['Ctrl', 'Alt']},
         role=None,
         remove_from_other=a2)
 
-    a1.get_button() == 'Left'
-    a1.get_modifiers() == ['Ctrl', 'Alt']
-    a2.get_button() == 'Not Configured'
-    a2.get_modifiers() == []
+    assert a1.get_button() == 'Left'
+    assert a1.get_modifiers() == ['Ctrl', 'Alt']
+    assert a2.get_button() == 'Not Configured'
+    assert a2.get_modifiers() == []

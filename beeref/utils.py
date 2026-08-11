@@ -13,8 +13,8 @@
 # You should have received a copy of the GNU General Public License
 # along with BeeRef.  If not, see <https://www.gnu.org/licenses/>.
 
-from collections import OrderedDict
 import re
+from collections import OrderedDict
 
 from PyQt6 import QtCore, QtGui
 

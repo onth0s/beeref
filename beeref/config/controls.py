@@ -15,24 +15,24 @@
 
 """Handling of keyboard shortcuts and mouse controls."""
 
-from collections import OrderedDict
-from functools import cached_property
 import logging
 import logging.config
 import os.path
-
-from beeref.config.settings import BeeSettings, settings_events
-from beeref.utils import ActionList
+from collections import OrderedDict
+from functools import cached_property
+from typing import ClassVar
 
 from PyQt6 import QtCore
 from PyQt6.QtCore import Qt
 
+from beeref.config.settings import BeeSettings, settings_events
+from beeref.utils import ActionList
 
 logger = logging.getLogger(__name__)
 
 
 class MouseConfigBase:
-    MODIFIER_MAP = OrderedDict((
+    MODIFIER_MAP: ClassVar = OrderedDict((
         ('No Modifier', Qt.KeyboardModifier.NoModifier),
         ('Shift', Qt.KeyboardModifier.ShiftModifier),
         ('Ctrl', Qt.KeyboardModifier.ControlModifier),
@@ -41,7 +41,7 @@ class MouseConfigBase:
         ('Keypad', Qt.KeyboardModifier.KeypadModifier),
     ))
 
-    BUTTON_MAP = OrderedDict((
+    BUTTON_MAP: ClassVar = OrderedDict((
         ('Not Configured', Qt.MouseButton.NoButton),
         ('Left', Qt.MouseButton.LeftButton),
         ('Middle',  Qt.MouseButton.MiddleButton),

@@ -13,21 +13,19 @@
 # You should have received a copy of the GNU General Public License
 # along with BeeRef.  If not, see <https://www.gnu.org/licenses/>.
 
-from functools import partial
 import logging
 import math
+from functools import partial
 from queue import Queue
 
-from PyQt6 import QtCore, QtWidgets, QtGui
-from PyQt6.QtCore import Qt
-
 import rpack
+from PyQt6 import QtCore, QtGui, QtWidgets
+from PyQt6.QtCore import Qt
 
 from beeref import commands
 from beeref.config import BeeSettings
-from beeref.items import item_registry, BeeErrorItem, sort_by_filename
+from beeref.items import BeeErrorItem, item_registry, sort_by_filename
 from beeref.selection import MultiSelectItem, RubberbandItem
-
 
 logger = logging.getLogger(__name__)
 
@@ -105,7 +103,7 @@ class BeeGraphicsScene(QtWidgets.QGraphicsScene):
     def raise_to_top(self):
         self.cancel_active_modes()
         items = self.selectedItems(user_only=True)
-        z_values = map(lambda i: i.zValue(), items)
+        z_values = (i.zValue() for i in items)
         delta = self.max_z + self.Z_STEP - min(z_values)
         logger.debug(f'Raise to top, delta: {delta}')
         for item in items:
@@ -114,7 +112,7 @@ class BeeGraphicsScene(QtWidgets.QGraphicsScene):
     def lower_to_bottom(self):
         self.cancel_active_modes()
         items = self.selectedItems(user_only=True)
-        z_values = map(lambda i: i.zValue(), items)
+        z_values = (i.zValue() for i in items)
         delta = self.min_z - self.Z_STEP - max(z_values)
         logger.debug(f'Lower to bottom, delta: {delta}')
 
@@ -211,7 +209,7 @@ class BeeGraphicsScene(QtWidgets.QGraphicsScene):
 
         if vertical:
             rects.sort(key=lambda r: r['rect'].topLeft().y())
-            sum_height = sum(map(lambda r: r['rect'].height(), rects))
+            sum_height = sum(r['rect'].height() for r in rects)
             y = round(center.y() - sum_height/2)
             for rect in rects:
                 positions.append(
@@ -221,7 +219,7 @@ class BeeGraphicsScene(QtWidgets.QGraphicsScene):
 
         else:
             rects.sort(key=lambda r: r['rect'].topLeft().x())
-            sum_width = sum(map(lambda r: r['rect'].width(), rects))
+            sum_width = sum(r['rect'].width() for r in rects)
             x = round(center.x() - sum_width/2)
             for rect in rects:
                 positions.append(
@@ -251,7 +249,7 @@ class BeeGraphicsScene(QtWidgets.QGraphicsScene):
 
         # The minimal area the items need if they could be packed optimally;
         # we use this as a starting shape for the packing algorithm
-        min_area = sum(map(lambda s: s[0] * s[1], sizes))
+        min_area = sum(s[0] * s[1] for s in sizes)
         width = math.ceil(math.sqrt(min_area))
 
         positions = None

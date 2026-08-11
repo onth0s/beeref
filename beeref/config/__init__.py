@@ -23,13 +23,12 @@ from PyQt6 import QtCore
 
 from beeref import constants
 from beeref.config.controls import KeyboardSettings  # noqa F401
-from beeref.config.settings import (   # noqa F401
+from beeref.config.settings import (  # noqa F401
     BeeSettings,
     CommandlineArgs,
     settings_events,
 )
 from beeref.logging import qt_message_handler
-
 
 logger = logging.getLogger(__name__)
 

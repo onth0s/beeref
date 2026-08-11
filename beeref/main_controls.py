@@ -19,10 +19,8 @@ import os
 from PyQt6 import QtCore, QtGui
 from PyQt6.QtCore import Qt
 
-from beeref import commands, widgets
+from beeref import commands, fileio, widgets
 from beeref.items import BeePixmapItem
-from beeref import fileio
-
 
 logger = logging.getLogger(__name__)
 
@@ -76,9 +74,7 @@ class MainControlsMixin:
     def dragEnterEvent(self, event):
         mimedata = event.mimeData()
         logger.debug(f'Drag enter event: {mimedata.formats()}')
-        if mimedata.hasUrls():
-            event.acceptProposedAction()
-        elif mimedata.hasImage():
+        if mimedata.hasUrls() or mimedata.hasImage():
             event.acceptProposedAction()
         else:
             msg = 'Attempted drop not an image or image too big'
@@ -119,7 +115,7 @@ class MainControlsMixin:
             event.accept()
             return True
 
-        action, inverted =\
+        action, _inverted =\
             self.control_target.keyboard_settings.mouse_action_for_event(event)
         if action == 'movewindow':
             self.enter_movewin_mode()

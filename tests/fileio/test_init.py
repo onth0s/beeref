@@ -4,8 +4,8 @@ from unittest.mock import MagicMock, patch
 
 from PyQt6 import QtCore
 
-from beeref import fileio
-from beeref import commands
+from beeref import commands, fileio
+
 from ..utils import queue2list
 
 

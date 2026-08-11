@@ -13,10 +13,10 @@
 # You should have received a copy of the GNU General Public License
 # along with BeeRef.  If not, see <https://www.gnu.org/licenses/>.
 
-from functools import partial
 import logging
+from functools import partial
 
-from PyQt6 import QtWidgets, QtCore
+from PyQt6 import QtCore, QtWidgets
 
 from beeref.config import KeyboardSettings, settings_events
 from beeref.config.controls import MouseConfig
@@ -24,7 +24,6 @@ from beeref.widgets.controls.common import (
     MouseControlsEditorBase,
     MouseControlsModelBase,
 )
-
 
 logger = logging.getLogger(__name__)
 
@@ -55,7 +54,7 @@ class MouseControlsEditor(MouseControlsEditorBase):
         """
         self.ignore_on_changed = True
         if self.get_button() == 'Not Configured':
-            for key, checkbox in self.checkboxes.items():
+            for checkbox in self.checkboxes.values():
                 checkbox.setChecked(False)
                 self.set_modifiers_enabled(False)
         else:
@@ -66,7 +65,7 @@ class MouseControlsEditor(MouseControlsEditorBase):
         self.ignore_on_changed = False
 
     def set_modifiers_enabled(self, enabled):
-        for key, checkbox in self.checkboxes.items():
+        for checkbox in self.checkboxes.values():
             checkbox.setEnabled(enabled)
 
     def get_button(self):

@@ -19,7 +19,6 @@ import os.path
 
 from PyQt6 import QtCore
 
-
 logging.TRACE = 5
 
 

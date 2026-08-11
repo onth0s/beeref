@@ -23,14 +23,13 @@ from beeref.fileio.image import load_image
 from beeref.fileio.sql import SQLiteIO, is_bee_file
 from beeref.items import BeePixmapItem
 
-
 __all__ = [
+    'BeeFileIOError',
+    'ThreadedLoader',
     'is_bee_file',
     'load_bee',
-    'save_bee',
     'load_images',
-    'ThreadedLoader',
-    'BeeFileIOError',
+    'save_bee',
 ]
 
 logger = logging.getLogger(__name__)

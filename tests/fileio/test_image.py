@@ -3,10 +3,8 @@ import os.path
 from unittest.mock import patch
 
 import httpretty
-import pytest
-
 import plum
-
+import pytest
 from PyQt6 import QtCore, QtGui
 
 from beeref.fileio.image import exif_rotated_image, load_image
@@ -170,7 +168,7 @@ def test_load_image_from_pinterest_when_img_url_not_found(view, imgdata3x3):
         img_url,
         body=imgdata3x3,
     )
-    img, filename = load_image(QtCore.QUrl(url))
+    img, _filename = load_image(QtCore.QUrl(url))
     assert img.isNull() is True
 
 
@@ -182,5 +180,5 @@ def test_load_image_from_pinterest_when_url_errors(view, imgdata3x3):
         url,
         status=500,
     )
-    img, filename = load_image(QtCore.QUrl(url))
+    img, _filename = load_image(QtCore.QUrl(url))
     assert img.isNull() is True

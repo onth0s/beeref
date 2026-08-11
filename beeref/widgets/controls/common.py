@@ -14,12 +14,13 @@
 # along with BeeRef.  If not, see <https://www.gnu.org/licenses/>.
 
 from functools import partial
+from typing import ClassVar
 
-from PyQt6 import QtWidgets, QtCore
+from PyQt6 import QtCore, QtWidgets
 from PyQt6.QtCore import Qt
 
-from beeref.config import KeyboardSettings
 from beeref import constants
+from beeref.config import KeyboardSettings
 
 
 class MouseControlsEditorBase(QtWidgets.QDialog):
@@ -47,7 +48,7 @@ class MouseControlsEditorBase(QtWidgets.QDialog):
         group.setLayout(group_layout)
         self.layout.addWidget(group)
         self.checkboxes = {}
-        for mod in self.action.MODIFIER_MAP.keys():
+        for mod in self.action.MODIFIER_MAP:
             checkbox = QtWidgets.QCheckBox(mod)
             checkbox.setChecked(mod in self.old_modifiers)
             checkbox.stateChanged.connect(
@@ -144,7 +145,7 @@ class MouseControlsModelBase(QtCore.QAbstractTableModel):
     COL_MODIFIERS = 4
     COL_INVERTED = 5
 
-    HEADERS = {
+    HEADERS: ClassVar = {
         COL_ACTION: 'Action',
         COL_CHANGED: constants.CHANGED_SYMBOL,
         COL_BUTTON: 'Button',
@@ -228,12 +229,12 @@ class MouseControlsModelBase(QtCore.QAbstractTableModel):
                 default = 'Yes' if action.inverted else 'No'
                 return f'Default: {default}'
 
-        if role == QtCore.Qt.ItemDataRole.CheckStateRole:
-            if (key == self.COL_INVERTED
-                    and action.is_configured()
-                    and action.invertible):
-                return (Qt.CheckState.Checked if action.get_inverted()
-                        else Qt.CheckState.Unchecked)
+        if (role == QtCore.Qt.ItemDataRole.CheckStateRole
+                and key == self.COL_INVERTED
+                and action.is_configured()
+                and action.invertible):
+            return (Qt.CheckState.Checked if action.get_inverted()
+                    else Qt.CheckState.Unchecked)
 
     def set_data_on_action(self, action, value):
         raise NotImplementedError  # pragma: no cover
@@ -243,7 +244,7 @@ class MouseControlsModelBase(QtCore.QAbstractTableModel):
         action = self.actions[index.row()]
         if key == self.COL_INVERTED:
             action.set_inverted(
-                True if value == Qt.CheckState.Checked.value else False)
+                value == Qt.CheckState.Checked.value)
         else:
             self.set_data_on_action(action, value)
             if remove_from_other:

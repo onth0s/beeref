@@ -1,9 +1,8 @@
 import pytest
-
 from PyQt6 import QtCore, QtGui
 
-from beeref.actions.actions import Action
 from beeref import utils
+from beeref.actions.actions import Action
 
 
 def test_create_palette_from_dict_sets_qt_group():
@@ -85,13 +84,13 @@ def test_actionlist_inits_dict():
     action1 = Action(id='foo', text='Foo')
     action2 = Action(id='bar', text='Bar')
     actionlist = utils.ActionList([action1, action2])
-    actionlist['foo'] == action1
-    actionlist['bar'] == action2
+    assert actionlist['foo'] == action1
+    assert actionlist['bar'] == action2
 
 
 def test_actionlist_acts_as_list():
     action1 = Action(id='foo', text='Foo')
     action2 = Action(id='bar', text='Bar')
     actionlist = utils.ActionList([action1, action2])
-    actionlist[0] == action1
-    actionlist[1] == action2
+    assert actionlist[0] == action1
+    assert actionlist[1] == action2

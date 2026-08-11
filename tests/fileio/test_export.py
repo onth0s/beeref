@@ -1,9 +1,9 @@
 import pytest
 
 from beeref.fileio.export import (
-    exporter_registry,
     SceneToPixmapExporter,
     SceneToSVGExporter,
+    exporter_registry,
 )
 
 
@@ -12,4 +12,4 @@ from beeref.fileio.export import (
                           ('jpg', SceneToPixmapExporter),
                           ('svg', SceneToSVGExporter)])
 def test_registry(key, expected):
-    exporter_registry[key] == expected
+    assert exporter_registry[key] == expected

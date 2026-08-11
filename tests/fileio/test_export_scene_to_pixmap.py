@@ -1,14 +1,14 @@
 import os
 import stat
-from unittest.mock import patch, ANY, MagicMock
-import pytest
+from unittest.mock import ANY, MagicMock, patch
 
-from PyQt6 import QtGui, QtCore
+import pytest
+from PyQt6 import QtCore, QtGui
 
 from beeref import constants
-from beeref.items import BeePixmapItem
 from beeref.fileio.errors import BeeFileIOError
 from beeref.fileio.export import SceneToPixmapExporter
+from beeref.items import BeePixmapItem
 
 
 @patch('beeref.widgets.SceneToPixmapExporterDialog.exec', return_value=True)
@@ -142,7 +142,7 @@ def test_scene_to_pixmap_exporter_export_with_worker_when_canceled(
     worker.begin_processing.emit.assert_called_once_with(1)
     worker.progress.emit.assert_not_called()
     worker.finished.emit.assert_called_once_with(filename, [])
-    os.path.exists(filename) is False
+    assert os.path.exists(filename) is False
 
 
 def test_scene_to_pixmap_exporter_export_when_file_not_writeable(view, tmpdir):

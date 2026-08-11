@@ -20,10 +20,10 @@ from xml.etree import ElementTree as ET
 
 from PyQt6 import QtCore, QtGui
 
-from .errors import BeeFileIOError
 from beeref import constants, widgets
 from beeref.items import BeePixmapItem
 
+from .errors import BeeFileIOError
 
 logger = logging.getLogger(__name__)
 

@@ -545,7 +545,7 @@ def test_on_action_export_images_file_exists_skip(
     view.on_export_finished.assert_called_once_with(tmpdir, [])
     answer_mock.assert_called_once_with()
     exec_mock.assert_called_once_with()
-    imgfilename.read_text() == 'foo'
+    assert imgfilename.read_text() == 'foo'
 
 
 @patch('beeref.widgets.ExportImagesFileExistsDialog.exec',
@@ -566,7 +566,7 @@ def test_on_action_export_images_file_exists_canceled(
     qtbot.waitUntil(lambda: exec_mock.called is True)
     view.on_export_finished.assert_not_called()
     answer_mock.assert_not_called()
-    imgfilename.read_text() == 'foo'
+    assert imgfilename.read_text() == 'foo'
 
 
 @patch('beeref.view.BeeGraphicsView.get_confirmation_unsaved_changes',
@@ -694,7 +694,7 @@ def test_on_action_copy_image(clipboard_mock, view, imgfilename3x3):
     view.on_action_copy()
 
     clipboard_mock.return_value.setPixmap.assert_called_once()
-    view.scene.internal_clipboard == [item]
+    assert view.scene.internal_clipboard == [item]
     assert mimedata.data('beeref/items') == b'1'
     view.cancel_active_modes.assert_called_once_with()
 
@@ -710,7 +710,7 @@ def test_on_action_copy_text(clipboard_mock, view, imgfilename3x3):
     view.on_action_copy()
 
     clipboard_mock.return_value.setText.assert_called_once_with('foo bar')
-    view.scene.internal_clipboard == [item]
+    assert view.scene.internal_clipboard == [item]
     assert mimedata.data('beeref/items') == b'1'
     view.cancel_active_modes.assert_called_once_with()
 
@@ -1510,7 +1510,7 @@ def test_mouse_press_pan_middle_drag(mouse_event_mock, view):
     assert view.active_mode == view.PAN_MODE
     assert view.event_start == QtCore.QPointF(10.0, 20.0)
     mouse_event_mock.assert_not_called()
-    view.cursor() == Qt.CursorShape.ClosedHandCursor
+    assert view.viewport().cursor().shape() == Qt.CursorShape.ClosedHandCursor
     event.accept.assert_called_once_with()
 
 
@@ -1524,7 +1524,7 @@ def test_mouse_press_pan_alt_left_drag(mouse_event_mock, view):
     assert view.active_mode == view.PAN_MODE
     assert view.event_start == QtCore.QPointF(10.0, 20.0)
     mouse_event_mock.assert_not_called()
-    view.cursor() == Qt.CursorShape.ClosedHandCursor
+    assert view.viewport().cursor().shape() == Qt.CursorShape.ClosedHandCursor
     event.accept.assert_called_once_with()
 
 
@@ -1807,12 +1807,12 @@ def test_mouse_move_unhandled(mouse_event_mock, view):
 def test_mouse_release_pan(mouse_event_mock, view):
     event = MagicMock()
     view.active_mode = view.PAN_MODE
-    view.setCursor(Qt.CursorShape.ClosedHandCursor)
+    view.viewport().setCursor(Qt.CursorShape.ClosedHandCursor)
     view.mouseReleaseEvent(event)
     mouse_event_mock.assert_not_called()
     assert view.active_mode is None
     event.accept.assert_called_once_with()
-    view.cursor() == Qt.CursorShape.ArrowCursor
+    assert view.viewport().cursor().shape() == Qt.CursorShape.ArrowCursor
 
 
 @patch('PyQt6.QtWidgets.QGraphicsView.mouseReleaseEvent')

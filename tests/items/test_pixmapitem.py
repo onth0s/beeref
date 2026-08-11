@@ -1,6 +1,6 @@
-import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
+import pytest
 from PyQt6 import QtCore, QtGui, QtWidgets
 from PyQt6.QtCore import Qt
 
@@ -282,13 +282,13 @@ def test_pixmap_from_bytes(qapp, item, imgfilename3x3):
 def test_has_selection_outline_when_not_selected(view, item):
     view.scene.addItem(item)
     item.setSelected(False)
-    item.has_selection_outline() is False
+    assert item.has_selection_outline() is False
 
 
 def test_has_selection_outline_when_selected(view, item):
     view.scene.addItem(item)
     item.setSelected(True)
-    item.has_selection_outline() is True
+    assert item.has_selection_outline() is True
 
 
 def test_has_selection_handles_when_not_selected(view, item):
@@ -297,7 +297,7 @@ def test_has_selection_handles_when_not_selected(view, item):
     item2 = BeePixmapItem(QtGui.QImage())
     view.scene.addItem(item2)
     item2.setSelected(False)
-    item.has_selection_handles() is False
+    assert item.has_selection_handles() is False
 
 
 def test_has_selection_handles_when_selected_single(view, item):
@@ -306,7 +306,7 @@ def test_has_selection_handles_when_selected_single(view, item):
     item2 = BeePixmapItem(QtGui.QImage())
     view.scene.addItem(item2)
     item2.setSelected(False)
-    item.has_selection_handles() is True
+    assert item.has_selection_handles() is True
 
 
 def test_has_selection_handles_when_selected_multi(view, item):
@@ -315,7 +315,7 @@ def test_has_selection_handles_when_selected_multi(view, item):
     item2 = BeePixmapItem(QtGui.QImage())
     view.scene.addItem(item2)
     item2.setSelected(True)
-    item.has_selection_handles() is False
+    assert item.has_selection_handles() is False
 
 
 def test_selection_action_items(qapp):
@@ -563,7 +563,7 @@ def test_exit_crop_mode_confirmed(view, item):
     item.crop_mode_event_start = QtCore.QRectF(1, 1, 1, 1)
 
     item.exit_crop_mode(confirm=True)
-    item.crop == QtCore.QRectF(10, 20, 30, 40)
+    assert item.crop == QtCore.QRectF(10, 20, 30, 40)
     assert item.crop_mode is False
     assert item.crop_temp is None
     assert item.crop_mode_move is None
@@ -572,7 +572,7 @@ def test_exit_crop_mode_confirmed(view, item):
     item.prepareGeometryChange.assert_called()
     item.ungrabKeyboard.assert_called_once_with()
     assert view.scene.crop_item is None
-    view.scene.undo_stack.canUndo() is True
+    assert view.scene.undo_stack.canUndo() is True
 
 
 def test_exit_crop_mode_confirmed_no_change(view, item):
@@ -583,7 +583,7 @@ def test_exit_crop_mode_confirmed_no_change(view, item):
 
     item.exit_crop_mode(confirm=True)
     assert item.crop == QtCore.QRectF(0, 0, 100, 80)
-    view.scene.undo_stack.canUndo() is False
+    assert view.scene.undo_stack.canUndo() is False
 
 
 def test_exit_crop_mode_not_confirmed(view, item):
@@ -598,7 +598,7 @@ def test_exit_crop_mode_not_confirmed(view, item):
     item.crop_mode_event_start = QtCore.QRectF(1, 1, 1, 1)
 
     item.exit_crop_mode(confirm=False)
-    item.crop == QtCore.QRectF(0, 0, 100, 80)
+    assert item.crop == QtCore.QRectF(0, 0, 100, 80)
     assert item.crop_mode is False
     assert item.crop_temp is None
     assert item.crop_mode_move is None
@@ -607,7 +607,7 @@ def test_exit_crop_mode_not_confirmed(view, item):
     item.prepareGeometryChange.assert_called()
     item.ungrabKeyboard.assert_called_once_with()
     assert view.scene.crop_item is None
-    view.scene.undo_stack.canUndo() is False
+    assert view.scene.undo_stack.canUndo() is False
 
 
 @patch('PyQt6.QtWidgets.QGraphicsPixmapItem.keyPressEvent')
@@ -649,40 +649,42 @@ def test_hover_move_event_when_not_crop_mode(hover_mock, qapp, item):
     hover_mock.assert_called_once_with(event)
 
 
+@patch('beeref.items.BeePixmapItem.set_cursor')
 @patch('beeref.selection.SelectableMixin.hoverMoveEvent')
-def test_hover_move_event_crop_mode_inside_handle(hover_mock, qapp, item):
+def test_hover_move_event_crop_mode_inside_handle(hover_mock, cursor_mock, qapp, item):
     item.crop_mode = True
     item.crop_temp = QtCore.QRectF(0, 0, 100, 80)
     event = MagicMock()
     event.pos.return_value = QtCore.QPointF(5, 5)
 
     item.hoverMoveEvent(event)
-    item.cursor() == Qt.CursorShape.SizeFDiagCursor
+    cursor_mock.assert_called_once_with(Qt.CursorShape.SizeFDiagCursor)
     hover_mock.assert_not_called()
 
 
+@patch('beeref.items.BeePixmapItem.set_cursor')
 @patch('beeref.selection.SelectableMixin.hoverMoveEvent')
-def test_hover_move_event_crop_mode_inside_edge(hover_mock, qapp, item):
+def test_hover_move_event_crop_mode_inside_edge(hover_mock, cursor_mock, qapp, item):
     item.crop_mode = True
     item.crop_temp = QtCore.QRectF(0, 0, 100, 80)
     event = MagicMock()
     event.pos.return_value = QtCore.QPointF(5, 40)
 
     item.hoverMoveEvent(event)
-    item.cursor() == Qt.CursorShape.SizeHorCursor
+    cursor_mock.assert_called_once_with(Qt.CursorShape.SizeHorCursor)
     hover_mock.assert_not_called()
 
 
+@patch('beeref.items.BeePixmapItem.unset_cursor')
 @patch('beeref.selection.SelectableMixin.hoverMoveEvent')
-def test_hover_move_event_crop_mode_outside_handle(hover_mock, qapp, item):
+def test_hover_move_event_crop_mode_outside_handle(hover_mock, cursor_mock, qapp, item):
     item.crop_mode = True
     item.crop_temp = QtCore.QRectF(0, 0, 100, 80)
-    item.setCursor(Qt.CursorShape.SizeFDiagCursor)
     event = MagicMock()
     event.pos.return_value = QtCore.QPointF(50, 50)
 
     item.hoverMoveEvent(event)
-    item.cursor() == Qt.CursorShape.ArrowCursor
+    cursor_mock.assert_called_once_with()
     hover_mock.assert_not_called()
 
 

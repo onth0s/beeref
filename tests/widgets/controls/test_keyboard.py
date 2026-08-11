@@ -1,15 +1,15 @@
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
-from PyQt6 import QtWidgets, QtCore, QtGui
+from PyQt6 import QtCore, QtGui, QtWidgets
 
 from beeref.actions.actions import Action
+from beeref.utils import ActionList
 from beeref.widgets.controls.keyboard import (
     KeyboardShortcutsDelegate,
     KeyboardShortcutsEditor,
     KeyboardShortcutsModel,
     KeyboardShortcutsProxy,
 )
-from beeref.utils import ActionList
 
 
 def test_keyboard_shortcuts_editor_on_save_no_conflicts(view):
@@ -117,7 +117,7 @@ def test_keyboard_shortcuts_delegate_setmodeldata(view):
 
 def test_keyboard_shortcuts_model_columncount():
     model = KeyboardShortcutsModel()
-    model.columnCount(None) == 4
+    assert model.columnCount(None) == 4
 
 
 @patch('beeref.widgets.controls.keyboard.actions',
@@ -127,7 +127,7 @@ def test_keyboard_shortcuts_model_columncount():
        ]))
 def test_keyboard_shortcuts_model_rowcount():
     model = KeyboardShortcutsModel()
-    model.rowCount(None) == 2
+    assert model.rowCount(None) == 2
 
 
 def test_keyboard_shortcuts_model_data_gets_text():

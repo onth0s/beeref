@@ -16,9 +16,8 @@
 import logging
 import math
 
-from PyQt6 import QtWidgets, QtGui, QtCore
+from PyQt6 import QtCore, QtGui, QtWidgets
 from PyQt6.QtCore import Qt
-
 
 logger = logging.getLogger(__name__)
 

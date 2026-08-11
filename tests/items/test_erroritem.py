@@ -1,4 +1,4 @@
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 from PyQt6 import QtCore, QtWidgets
 
@@ -65,7 +65,7 @@ def test_update_from_data_keeps_unset_values(qapp):
 
 def test_create_from_data(qapp):
     item = BeeErrorItem.create_from_data(data={'text': 'hello world'})
-    item.toPlainText() == 'hello world'
+    assert item.toPlainText() == 'hello world'
     assert hasattr(item, 'save_id') is False
 
 
@@ -102,7 +102,7 @@ def test_flip(qapp):
 def test_contains_when_inside_bounds(brect_mock, qapp):
     brect_mock.return_value = QtCore.QRectF(20, 30, 50, 50)
     item = BeeErrorItem('foo bar')
-    item.contains(QtCore.QPointF(33, 45)) is True
+    assert item.contains(QtCore.QPointF(33, 45)) is True
     brect_mock.assert_called_once_with()
 
 
@@ -110,5 +110,5 @@ def test_contains_when_inside_bounds(brect_mock, qapp):
 def test_contains_when_outside_bounds(brect_mock, qapp):
     brect_mock.return_value = QtCore.QRectF(20, 30, 50, 50)
     item = BeeErrorItem('foo bar')
-    item.contains(QtCore.QPointF(19, 29)) is False
+    assert item.contains(QtCore.QPointF(19, 29)) is False
     brect_mock.assert_called_once_with()
