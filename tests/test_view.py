@@ -899,6 +899,25 @@ def test_init_with_paste_on_startup_when_empty(
     notification_mock.assert_called()
 
 
+@patch('beeref.widgets.BeeNotification')
+@patch('PyQt6.QtGui.QClipboard.text')
+@patch('PyQt6.QtGui.QClipboard.image')
+@patch('PyQt6.QtGui.QClipboard.mimeData')
+def test_init_with_paste_on_startup_when_text(
+        mime_mock, clipboard_mock, text_mock, notification_mock,
+        qtbot, commandline_args):
+    mime_mock.return_value = QtCore.QMimeData()
+    commandline_args.paste = True
+    clipboard_mock.return_value = QtGui.QImage()
+    text_mock.return_value = 'some plain text'
+    parent = QtWidgets.QMainWindow()
+    view = BeeGraphicsView(QtWidgets.QApplication.instance(), parent)
+    qtbot.addWidget(parent)
+    qtbot.wait(50)
+    assert len(view.scene.items()) == 0
+    notification_mock.assert_called()
+
+
 @patch('beeref.view.BeeGraphicsView.on_action_copy')
 def test_on_action_cut(copy_mock, view, item):
     view.scene.addItem(item)

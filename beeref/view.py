@@ -91,7 +91,8 @@ class BeeGraphicsView(MainControlsMixin,
                 self.do_insert_images(commandline_args.filenames)
 
         if commandline_args.paste:
-            QtCore.QTimer.singleShot(0, self.on_action_paste)
+            QtCore.QTimer.singleShot(
+                0, lambda: self.on_action_paste(allow_text=False))
 
         self.update_window_title()
 
@@ -639,7 +640,7 @@ class BeeGraphicsView(MainControlsMixin,
         clipboard.mimeData().setData(
             'beeref/items', QtCore.QByteArray.number(len(items)))
 
-    def on_action_paste(self):
+    def on_action_paste(self, allow_text=True):
         self.cancel_active_modes()
         logger.debug('Pasting from clipboard...')
         clipboard = QtWidgets.QApplication.clipboard()
@@ -690,10 +691,12 @@ class BeeGraphicsView(MainControlsMixin,
                 logger.debug(f'Pasting local file path: {text}')
                 self.do_insert_images([text], viewport_pos)
                 return
-            item = BeeTextItem(text)
-            item.setScale(1 / self.get_scale())
-            self.undo_stack.push(commands.InsertItems(self.scene, [item], pos))
-            return
+            if allow_text:
+                item = BeeTextItem(text)
+                item.setScale(1 / self.get_scale())
+                self.undo_stack.push(
+                    commands.InsertItems(self.scene, [item], pos))
+                return
 
         msg = 'No image data or text in clipboard or image too big'
         logger.info(msg)
