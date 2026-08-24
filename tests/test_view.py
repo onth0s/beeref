@@ -11,6 +11,7 @@ from PyQt6.QtCore import Qt
 from beeref import commands, widgets
 from beeref.actions import actions
 from beeref.config import logfile_name
+from beeref.fileio.sql import SQLiteIO
 from beeref.items import BeePixmapItem, BeeTextItem
 from beeref.view import BeeGraphicsView
 
@@ -1226,6 +1227,69 @@ def test_clear_scene_resets_view_states(view):
     view.clear_scene()
 
     assert view.scene.saved_view_state is None
+    assert view.scene.saved_view_state_fullscreen is None
+    assert view.scene.saved_view_state_windowed is None
+
+
+def test_save_and_reopen_preserves_canvas_layout(view, qtbot, tmpfile, item):
+    item.setPos(500, 800)
+    view.scene.addItem(item)
+    view.parent.resize(QtCore.QSize(800, 600))
+    view.parent.show()
+    qtbot.wait(100)
+    view.scale(2.5, 2.5)
+    view.centerOn(QtCore.QPointF(510, 815))
+    saved = view.get_view_state()
+
+    view.do_save(tmpfile, True)
+    view.worker.wait()
+    path = f'{tmpfile}.bee'
+    view.open_from_file(path)
+    view.worker.wait()
+    qtbot.waitUntil(lambda: view.filename == path)
+    qtbot.wait(100)
+
+    loaded = view.get_view_state()
+    assert loaded is not None
+    assert loaded['scale'] == pytest.approx(saved['scale'])
+    # Scrollbars snap to integers, so allow a small deviation
+    assert loaded['center_x'] == pytest.approx(saved['center_x'], abs=1.5)
+    assert loaded['center_y'] == pytest.approx(saved['center_y'], abs=1.5)
+
+
+@patch('PyQt6.QtWidgets.QMainWindow.isFullScreen', return_value=True)
+def test_do_save_fullscreen_without_windowed_capture_saves_current(
+        fs_mock, view, item, tmpfile):
+    item.setPos(500, 800)
+    view.scene.addItem(item)
+    view.scale(2, 2)
+    view.centerOn(QtCore.QPointF(510, 815))
+    live = view.get_view_state()
+    assert view.scene.saved_view_state_windowed is None
+
+    view.do_save(tmpfile, True)
+    view.worker.wait()
+
+    io = SQLiteIO(f'{tmpfile}.bee', view.scene, readonly=True)
+    io.read()
+    assert view.scene.saved_view_state == live
+
+
+def test_do_save_windowed_does_not_invent_fullscreen_state(
+        view, item, tmpfile):
+    item.setPos(500, 800)
+    view.scene.addItem(item)
+    view.scale(2, 2)
+    view.centerOn(QtCore.QPointF(510, 815))
+    live = view.get_view_state()
+    assert view.scene.saved_view_state_fullscreen is None
+
+    view.do_save(tmpfile, True)
+    view.worker.wait()
+
+    io = SQLiteIO(f'{tmpfile}.bee', view.scene, readonly=True)
+    io.read()
+    assert view.scene.saved_view_state == live
     assert view.scene.saved_view_state_fullscreen is None
 
 

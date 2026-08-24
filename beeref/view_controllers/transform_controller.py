@@ -46,6 +46,12 @@ class TransformMixin:
             center = QtCore.QPointF(state['center_x'], state['center_y'])
             self.setTransform(QtGui.QTransform.fromScale(scale, scale))
             self.centerOn(center)
+            # The scene rect may still be the one computed under a
+            # different transform (e.g. while loading, before the
+            # saved transform was applied); recalculate it and re-assert
+            # the center so it doesn't get clamped to the stale rect.
+            self.recalc_scene_rect()
+            self.centerOn(center)
             return True
         return False
 

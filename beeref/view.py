@@ -161,6 +161,7 @@ class BeeGraphicsView(MainControlsMixin,
         self.scene.clear()
         self.scene.saved_view_state = None
         self.scene.saved_view_state_fullscreen = None
+        self.scene.saved_view_state_windowed = None
         self.undo_stack.clear()
         self.filename = None
         self.setTransform(QtGui.QTransform())
@@ -444,8 +445,13 @@ class BeeGraphicsView(MainControlsMixin,
             filename = f'{filename}.bee'
         if self.parent.isFullScreen():
             # Each mode saves its own last-known layout
-            view_state = self.scene.saved_view_state_windowed
             view_state_fullscreen = self.get_view_state()
+            view_state = self.scene.saved_view_state_windowed
+            if view_state is None:
+                # Fullscreen was entered on an empty scene, so nothing
+                # was captured for the windowed mode yet; fall back to
+                # the current layout instead of wiping a stored one
+                view_state = view_state_fullscreen
         else:
             view_state = self.get_view_state()
             view_state_fullscreen = self.scene.saved_view_state_fullscreen
