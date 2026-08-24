@@ -35,6 +35,8 @@ from beeref.view_controllers import ModeMixin, TransformMixin
 commandline_args = CommandlineArgs()
 logger = logging.getLogger(__name__)
 
+PENDING_MODE_SWITCH_QUIET_MS = 100
+
 
 class BeeGraphicsView(MainControlsMixin,
                       TransformMixin,
@@ -69,6 +71,14 @@ class BeeGraphicsView(MainControlsMixin,
         self.filename = None
         self.previous_transform = None
         self.active_mode = None
+        self.pending_mode_switch = None
+        self.pending_mode_switch_active = False
+        self._pending_mode_switch_timer = QtCore.QTimer(self)
+        self._pending_mode_switch_timer.setSingleShot(True)
+        self._pending_mode_switch_timer.setInterval(
+            PENDING_MODE_SWITCH_QUIET_MS)
+        self._pending_mode_switch_timer.timeout.connect(
+            self._deactivate_pending_mode_switch)
 
         self.scene = BeeGraphicsScene(self.undo_stack)
         self.scene.changed.connect(self.on_scene_changed)
@@ -203,11 +213,30 @@ class BeeGraphicsView(MainControlsMixin,
             show = self.parent.showNormal
         center = (self.mapToScene(self.get_view_center())
                   if stored is None and self.scene.items() else None)
+        pending = stored if stored is not None else center
+        if pending is not None:
+            # The viewport resize triggered by the mode switch may still
+            # arrive after show(); re-assert the layout once it does.
+            # The arm timer ensures resizes that already happened
+            # synchronously during show() are not applied twice.
+            self.pending_mode_switch = pending
+            QtCore.QTimer.singleShot(
+                0, self._activate_pending_mode_switch)
         show()
         if not self.apply_view_state(stored) and center is not None:
             # First time in this mode: keep the zoom and pin the scene
             # center so the viewport change doesn't shift the view
             self.centerOn(center)
+
+    def _activate_pending_mode_switch(self):
+        self.pending_mode_switch_active = True
+        # Disarm again once the resize burst following the mode switch
+        # has gone quiet; also covers transitions without any resizes
+        self._pending_mode_switch_timer.start()
+
+    def _deactivate_pending_mode_switch(self):
+        self.pending_mode_switch_active = False
+        self.pending_mode_switch = None
 
     def on_action_always_on_top(self, checked):
         self.parent.setWindowFlag(
@@ -909,6 +938,17 @@ class BeeGraphicsView(MainControlsMixin,
     def resizeEvent(self, event):
         super().resizeEvent(event)
         self.recalc_scene_rect()
+        if self.pending_mode_switch_active:
+            # Mode switches can deliver several resizes in a quick
+            # burst (e.g. frameless conversion + screen bounds on the
+            # first fullscreen transition); re-apply for each of them
+            # and keep the quiet timer running until the burst is over
+            pending = self.pending_mode_switch
+            if isinstance(pending, dict):
+                self.apply_view_state(pending)
+            elif pending is not None:
+                self.centerOn(pending)
+            self._pending_mode_switch_timer.start()
         self.welcome_overlay.resize(self.size())
 
     def keyPressEvent(self, event):

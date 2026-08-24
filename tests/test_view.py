@@ -1217,6 +1217,219 @@ def test_on_action_fullscreen_enter_without_stored_layout_keeps_view(
     assert view.scene.saved_view_state_windowed == view.get_view_state()
 
 
+def _late_resize_show(show_mock, view, width, height):
+    """Simulate the viewport resize arriving asynchronously *after*
+    showFullScreen()/showNormal() returns (as it does in real usage).
+    Resizes the parent window since the layout manager governs the
+    view's geometry."""
+    def late_resize():
+        view.parent.resize(QtCore.QSize(width, height))
+    show_mock.side_effect = lambda: QtCore.QTimer.singleShot(0, late_resize)
+
+
+def _late_resizes_show(show_mock, view, *sizes):
+    """Simulate several viewport resizes arriving in a quick burst
+    *after* showFullScreen()/showNormal() returns (as happens on real
+    first-time fullscreen transitions)."""
+    def late_resizes():
+        for i, (width, height) in enumerate(sizes):
+            QtCore.QTimer.singleShot(
+                i * 30, lambda w=width, h=height:
+                    view.parent.resize(QtCore.QSize(w, h)))
+    show_mock.side_effect = lambda: QtCore.QTimer.singleShot(0, late_resizes)
+
+
+@patch('PyQt6.QtWidgets.QMainWindow.showFullScreen')
+def test_on_action_fullscreen_enter_stored_layout_survives_late_resize(
+        show_mock, view, qtbot):
+    populate_scene(view)
+    view.parent.resize(QtCore.QSize(800, 600))
+    fs_state = {'scale': 3.0, 'center_x': 1005.0, 'center_y': 2005.0}
+    view.scene.saved_view_state_fullscreen = dict(fs_state)
+    _late_resize_show(show_mock, view, 1600, 900)
+
+    view.on_action_fullscreen(True)
+    qtbot.wait(50)
+
+    assert view.get_scale() == pytest.approx(fs_state['scale'])
+    center = view.mapToScene(view.get_view_center())
+    assert center.x() == pytest.approx(fs_state['center_x'], abs=1.5)
+    assert center.y() == pytest.approx(fs_state['center_y'], abs=1.5)
+
+
+@patch('PyQt6.QtWidgets.QMainWindow.showFullScreen')
+def test_on_action_fullscreen_enter_survives_multiple_late_resizes(
+        show_mock, view, qtbot):
+    populate_scene(view)
+    view.parent.resize(QtCore.QSize(800, 600))
+    fs_state = {'scale': 3.0, 'center_x': 1005.0, 'center_y': 2005.0}
+    view.scene.saved_view_state_fullscreen = dict(fs_state)
+    # First-time fullscreen transitions deliver several geometry events:
+    # intermediate sizes plus the final screen size
+    _late_resizes_show(show_mock, view, (1000, 700), (1600, 900))
+
+    view.on_action_fullscreen(True)
+    qtbot.wait(250)
+
+    assert view.get_scale() == pytest.approx(fs_state['scale'])
+    center = view.mapToScene(view.get_view_center())
+    assert center.x() == pytest.approx(fs_state['center_x'], abs=1.5)
+    assert center.y() == pytest.approx(fs_state['center_y'], abs=1.5)
+    assert view.pending_mode_switch is None
+
+
+@patch('PyQt6.QtWidgets.QMainWindow.showNormal')
+def test_on_action_fullscreen_exit_survives_multiple_late_resizes(
+        show_mock, view, qtbot):
+    populate_scene(view)
+    view.parent.resize(QtCore.QSize(1600, 900))
+    win_state = {'scale': 1.5, 'center_x': 900.0, 'center_y': 1950.0}
+    view.scene.saved_view_state_windowed = dict(win_state)
+    _late_resizes_show(show_mock, view, (1200, 800), (800, 600))
+
+    view.on_action_fullscreen(False)
+    qtbot.wait(250)
+
+    assert view.get_scale() == pytest.approx(win_state['scale'])
+    center = view.mapToScene(view.get_view_center())
+    assert center.x() == pytest.approx(win_state['center_x'], abs=1.5)
+    assert center.y() == pytest.approx(win_state['center_y'], abs=1.5)
+    assert view.pending_mode_switch is None
+
+
+@patch('PyQt6.QtWidgets.QMainWindow.showNormal')
+def test_on_action_fullscreen_exit_stored_layout_survives_late_resize(
+        show_mock, view, qtbot):
+    populate_scene(view)
+    view.parent.resize(QtCore.QSize(1600, 900))
+    # Must be a center that is reachable in BOTH viewport sizes,
+    # otherwise the scrollbars clamp and the comparison is moot
+    win_state = {'scale': 1.5, 'center_x': 900.0, 'center_y': 1950.0}
+    view.scene.saved_view_state_windowed = dict(win_state)
+    _late_resize_show(show_mock, view, 800, 600)
+
+    view.on_action_fullscreen(False)
+    qtbot.wait(50)
+
+    assert view.get_scale() == pytest.approx(win_state['scale'])
+    center = view.mapToScene(view.get_view_center())
+    assert center.x() == pytest.approx(win_state['center_x'], abs=1.5)
+    assert center.y() == pytest.approx(win_state['center_y'], abs=1.5)
+
+
+@patch('PyQt6.QtWidgets.QMainWindow.showFullScreen')
+def test_on_action_fullscreen_first_entry_pins_center_after_late_resize(
+        show_mock, view, qtbot):
+    populate_scene(view)
+    view.parent.resize(QtCore.QSize(800, 600))
+    view.scale(2, 2)
+    center_before = view.mapToScene(view.get_view_center())
+    _late_resize_show(show_mock, view, 1600, 900)
+
+    view.on_action_fullscreen(True)
+    qtbot.wait(50)
+
+    center = view.mapToScene(view.get_view_center())
+    # Scrollbars snap to integers, so allow a small deviation
+    assert center.x() == pytest.approx(center_before.x(), abs=1.5)
+    assert center.y() == pytest.approx(center_before.y(), abs=1.5)
+
+
+@patch('PyQt6.QtWidgets.QMainWindow.showFullScreen')
+def test_pending_mode_switch_cleared_after_consumption(
+        show_mock, view, qtbot):
+    populate_scene(view)
+    view.parent.resize(QtCore.QSize(1200, 800))
+    # Reachable center in both viewport sizes (see exit tests above)
+    fs_state = {'scale': 2.0, 'center_x': 1000.0, 'center_y': 2005.0}
+    view.scene.saved_view_state_fullscreen = dict(fs_state)
+    _late_resize_show(show_mock, view, 1400, 700)
+
+    view.on_action_fullscreen(True)
+    # Let the resize arrive and the quiet period elapse afterwards
+    qtbot.wait(250)
+
+    assert view.pending_mode_switch is None
+    assert view.pending_mode_switch_active is False
+
+    # User pans around; the following window resize must NOT snap the
+    # view back to the stored fullscreen state (scrollbar ranges make
+    # the exact resulting position platform-dependent, so we only
+    # assert that no re-application happened)
+    view.pan(QtCore.QPoint(60, 30))
+    pan_center = view.mapToScene(view.get_view_center())
+    view.parent.resize(QtCore.QSize(1600, 600))
+    qtbot.wait(20)
+
+    center = view.mapToScene(view.get_view_center())
+    assert center != pan_center  # plain viewport geometry shifts it
+    assert abs(center.x() - fs_state['center_x']) > 1.5
+    assert abs(center.y() - fs_state['center_y']) > 1.5
+
+
+@patch('PyQt6.QtWidgets.QMainWindow.showFullScreen')
+def test_pending_mode_switch_disarms_without_any_resize(
+        show_mock, view, qtbot):
+    populate_scene(view)
+    fs_state = {'scale': 2.0, 'center_x': 1000.0, 'center_y': 2005.0}
+    view.scene.saved_view_state_fullscreen = dict(fs_state)
+
+    view.on_action_fullscreen(True)
+    qtbot.wait(250)
+
+    # No resizes happened at all: the pending state must still disarm
+    # so that later user-driven resizes are left alone
+    assert view.pending_mode_switch is None
+    assert view.pending_mode_switch_active is False
+
+    view.pan(QtCore.QPoint(60, 30))
+    view.parent.resize(QtCore.QSize(1400, 800))
+    qtbot.wait(20)
+
+    # Still disarmed, zoom untouched, and the view did not snap back
+    # to the stored fullscreen state
+    assert view.pending_mode_switch is None
+    assert view.get_scale() == pytest.approx(fs_state['scale'])
+    center = view.mapToScene(view.get_view_center())
+    assert center != QtCore.QPointF(
+        fs_state['center_x'], fs_state['center_y'])
+
+
+@patch('PyQt6.QtWidgets.QMainWindow.isFullScreen', return_value=True)
+@patch('PyQt6.QtWidgets.QMainWindow.showFullScreen')
+def test_fullscreen_save_reopen_and_restore(
+        show_mock, fs_mock, view, qtbot, item, tmpfile):
+    item.setPos(500, 800)
+    view.scene.addItem(item)
+    view.parent.resize(QtCore.QSize(800, 600))
+    view.scale(3, 3)
+    view.centerOn(QtCore.QPointF(510, 815))
+    fs_saved = view.get_view_state()
+
+    view.do_save(tmpfile, True)
+    view.worker.wait()
+    path = f'{tmpfile}.bee'
+
+    # Reopen in a new session: windowed layout is applied, fullscreen
+    # layout stays stored until F11 is pressed
+    view.clear_scene()
+    view.open_from_file(path)
+    view.worker.wait()
+    qtbot.waitUntil(lambda: view.filename == path)
+    qtbot.wait(50)
+    assert view.scene.saved_view_state_fullscreen == fs_saved
+
+    _late_resize_show(show_mock, view, 1600, 900)
+    view.on_action_fullscreen(True)
+    qtbot.wait(50)
+
+    loaded = view.get_view_state()
+    assert loaded['scale'] == pytest.approx(fs_saved['scale'])
+    center = view.mapToScene(view.get_view_center())
+    assert center.x() == pytest.approx(fs_saved['center_x'], abs=1.5)
+    assert center.y() == pytest.approx(fs_saved['center_y'], abs=1.5)
+
+
 def test_clear_scene_resets_view_states(view):
     populate_scene(view)
     view.scene.saved_view_state = {
