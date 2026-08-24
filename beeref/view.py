@@ -160,6 +160,7 @@ class BeeGraphicsView(MainControlsMixin,
         self.cancel_active_modes()
         self.scene.clear()
         self.scene.saved_view_state = None
+        self.scene.saved_view_state_fullscreen = None
         self.undo_stack.clear()
         self.filename = None
         self.setTransform(QtGui.QTransform())
@@ -192,9 +193,20 @@ class BeeGraphicsView(MainControlsMixin,
 
     def on_action_fullscreen(self, checked):
         if checked:
-            self.parent.showFullScreen()
+            self.scene.saved_view_state_windowed = self.get_view_state()
+            stored = self.scene.saved_view_state_fullscreen
+            show = self.parent.showFullScreen
         else:
-            self.parent.showNormal()
+            self.scene.saved_view_state_fullscreen = self.get_view_state()
+            stored = self.scene.saved_view_state_windowed
+            show = self.parent.showNormal
+        center = (self.mapToScene(self.get_view_center())
+                  if stored is None and self.scene.items() else None)
+        show()
+        if not self.apply_view_state(stored) and center is not None:
+            # First time in this mode: keep the zoom and pin the scene
+            # center so the viewport change doesn't shift the view
+            self.centerOn(center)
 
     def on_action_always_on_top(self, checked):
         self.parent.setWindowFlag(
@@ -430,10 +442,17 @@ class BeeGraphicsView(MainControlsMixin,
     def do_save(self, filename, create_new):
         if not fileio.is_bee_file(filename):
             filename = f'{filename}.bee'
-        view_state = self.get_view_state()
+        if self.parent.isFullScreen():
+            # Each mode saves its own last-known layout
+            view_state = self.scene.saved_view_state_windowed
+            view_state_fullscreen = self.get_view_state()
+        else:
+            view_state = self.get_view_state()
+            view_state_fullscreen = self.scene.saved_view_state_fullscreen
         self.worker = fileio.ThreadedIO(
             fileio.save_bee, filename, self.scene, create_new=create_new,
-            view_state=view_state)
+            view_state=view_state,
+            view_state_fullscreen=view_state_fullscreen)
         self.worker.finished.connect(self.on_saving_finished)
         self.progress = widgets.BeeProgressDialog(
             f'Saving {filename}',

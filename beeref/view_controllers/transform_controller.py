@@ -38,8 +38,9 @@ class TransformMixin:
             'center_y': center.y(),
         }
 
-    def apply_saved_view_state(self):
-        state = self.scene.saved_view_state
+    def apply_view_state(self, state):
+        """Apply a canvas layout dict as returned by get_view_state();
+        returns True if a state was applied."""
         if state and self.scene.items():
             scale = state['scale']
             center = QtCore.QPointF(state['center_x'], state['center_y'])
@@ -47,6 +48,9 @@ class TransformMixin:
             self.centerOn(center)
             return True
         return False
+
+    def apply_saved_view_state(self):
+        return self.apply_view_state(self.scene.saved_view_state)
 
     def reset_previous_transform(self, toggle_item=None):
         if (self.previous_transform

@@ -50,6 +50,7 @@ class BeeGraphicsScene(QtWidgets.QGraphicsScene):
         self.edit_item = None
         self.crop_item = None
         self.saved_view_state = None
+        self.saved_view_state_fullscreen = None
         self.settings = BeeSettings()
         self.clear()
         self._clear_ongoing = False

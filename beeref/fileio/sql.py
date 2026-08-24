@@ -74,13 +74,14 @@ def handle_sqlite_errors(func):
 class SQLiteIO:
 
     def __init__(self, filename, scene, create_new=False, readonly=False,
-                 worker=None, view_state=None):
+                 worker=None, view_state=None, view_state_fullscreen=None):
         self.scene = scene
         self.create_new = create_new
         self.filename = filename
         self.readonly = readonly
         self.worker = worker
         self.view_state = view_state
+        self.view_state_fullscreen = view_state_fullscreen
         self.retry = False
 
     def __del__(self):
@@ -191,6 +192,7 @@ class SQLiteIO:
     @handle_sqlite_errors
     def read(self):
         self.scene.saved_view_state = None
+        self.scene.saved_view_state_fullscreen = None
         canvas_row = self.fetchone(
             'SELECT scale, center_x, center_y FROM canvas')
         if canvas_row:
@@ -198,6 +200,14 @@ class SQLiteIO:
                 'scale': canvas_row[0],
                 'center_x': canvas_row[1],
                 'center_y': canvas_row[2],
+            }
+        fullscreen_row = self.fetchone(
+            'SELECT scale, center_x, center_y FROM canvas_fullscreen')
+        if fullscreen_row:
+            self.scene.saved_view_state_fullscreen = {
+                'scale': fullscreen_row[0],
+                'center_x': fullscreen_row[1],
+                'center_y': fullscreen_row[2],
             }
 
         rows = self.fetchall(
@@ -309,6 +319,21 @@ class SQLiteIO:
                  self.view_state['center_y']))
         else:
             self.ex('DELETE FROM canvas')
+        self.ex(
+            'CREATE TABLE IF NOT EXISTS canvas_fullscreen ('
+            'id INTEGER PRIMARY KEY CHECK (id = 1), '
+            'scale REAL DEFAULT 1, '
+            'center_x REAL DEFAULT 0, '
+            'center_y REAL DEFAULT 0)')
+        if self.view_state_fullscreen:
+            self.ex(
+                'INSERT OR REPLACE INTO canvas_fullscreen '
+                '(id, scale, center_x, center_y) VALUES (1, ?, ?, ?)',
+                (self.view_state_fullscreen['scale'],
+                 self.view_state_fullscreen['center_x'],
+                 self.view_state_fullscreen['center_y']))
+        else:
+            self.ex('DELETE FROM canvas_fullscreen')
         self.connection.commit()
         self.ex('VACUUM')
         if self.worker:

@@ -148,7 +148,7 @@ def test_sqliteio_create_schema_on_new_when_create_new(tmpfile):
     result = io.fetchone(
         'SELECT COUNT(*) FROM sqlite_master '
         'WHERE type="table" AND name NOT LIKE "sqlite_%"')
-    assert result[0] == 3
+    assert result[0] == 4
     scene_mock.clear_save_ids.assert_called_once()
 
 
@@ -167,13 +167,32 @@ def test_sqliteio_create_schema_on_new_when_not_create_new(
 
 def test_sqliteio_view_state_roundtrip(tmpfile, view):
     view_state = {'scale': 1.5, 'center_x': 120.0, 'center_y': 240.0}
-    io_write = SQLiteIO(tmpfile, view.scene, create_new=True, view_state=view_state)
+    io_write = SQLiteIO(tmpfile, view.scene, create_new=True,
+                        view_state=view_state)
     io_write.write()
 
     io_read = SQLiteIO(tmpfile, view.scene, readonly=True)
     io_read.read()
 
     assert view.scene.saved_view_state == view_state
+    assert view.scene.saved_view_state_fullscreen is None
+
+
+def test_sqliteio_view_state_fullscreen_roundtrip(tmpfile, view):
+    view_state = {'scale': 1.5, 'center_x': 120.0, 'center_y': 240.0}
+    fullscreen_state = {'scale': 2.5, 'center_x': 10.0, 'center_y': -30.0}
+    io_write = SQLiteIO(tmpfile, view.scene, create_new=True,
+                        view_state=view_state,
+                        view_state_fullscreen=fullscreen_state)
+    io_write.write()
+
+    view.scene.saved_view_state = None
+    view.scene.saved_view_state_fullscreen = None
+    io_read = SQLiteIO(tmpfile, view.scene, readonly=True)
+    io_read.read()
+
+    assert view.scene.saved_view_state == view_state
+    assert view.scene.saved_view_state_fullscreen == fullscreen_state
 
 
 def test_sqliteio_readonly_doesnt_allow_write(view, tmpfile):

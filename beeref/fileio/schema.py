@@ -1,4 +1,4 @@
-USER_VERSION = 3
+USER_VERSION = 4
 APPLICATION_ID = 2060242126
 
 
@@ -38,6 +38,14 @@ SCHEMA = [
         center_y REAL DEFAULT 0
     )
     """,
+    """
+    CREATE TABLE canvas_fullscreen (
+        id INTEGER PRIMARY KEY CHECK (id = 1),
+        scale REAL DEFAULT 1,
+        center_x REAL DEFAULT 0,
+        center_y REAL DEFAULT 0
+    )
+    """,
 ]
 
 
@@ -49,6 +57,16 @@ MIGRATIONS = {
     3: [
         """
         CREATE TABLE canvas (
+            id INTEGER PRIMARY KEY CHECK (id = 1),
+            scale REAL DEFAULT 1,
+            center_x REAL DEFAULT 0,
+            center_y REAL DEFAULT 0
+        )
+        """,
+    ],
+    4: [
+        """
+        CREATE TABLE canvas_fullscreen (
             id INTEGER PRIMARY KEY CHECK (id = 1),
             scale REAL DEFAULT 1,
             center_x REAL DEFAULT 0,

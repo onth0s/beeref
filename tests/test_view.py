@@ -1151,6 +1151,84 @@ def test_get_view_state_and_apply_saved_view_state(view):
     assert view.get_scale() == 2.5
 
 
+def populate_scene(view):
+    item = BeePixmapItem(QtGui.QImage(10, 10, QtGui.QImage.Format.Format_RGB32))
+    item.setPos(1000, 2000)
+    view.scene.addItem(item)
+
+
+@patch('PyQt6.QtWidgets.QMainWindow.showFullScreen')
+def test_on_action_fullscreen_enter_applies_fullscreen_layout(
+        show_mock, view):
+    populate_scene(view)
+    view.scale(2, 2)
+    windowed_state = view.get_view_state()
+    view.scene.saved_view_state_fullscreen = {
+        'scale': 0.5,
+        'center_x': 1005.0,
+        'center_y': 2005.0,
+    }
+
+    view.on_action_fullscreen(True)
+
+    show_mock.assert_called_once_with()
+    assert view.scene.saved_view_state_windowed == windowed_state
+    assert view.get_scale() == 0.5
+    center = view.mapToScene(view.get_view_center())
+    # Scrollbars snap to integers, so allow a small deviation
+    assert center.x() == pytest.approx(1005.0, abs=1.5)
+    assert center.y() == pytest.approx(2005.0, abs=1.5)
+
+
+@patch('PyQt6.QtWidgets.QMainWindow.showNormal')
+def test_on_action_fullscreen_exit_applies_windowed_layout(show_mock, view):
+    populate_scene(view)
+    view.scene.saved_view_state_windowed = {
+        'scale': 1.5,
+        'center_x': 1005.0,
+        'center_y': 2005.0,
+    }
+    view.scale(3, 3)
+    fullscreen_state = view.get_view_state()
+
+    view.on_action_fullscreen(False)
+
+    show_mock.assert_called_once_with()
+    assert view.scene.saved_view_state_fullscreen == fullscreen_state
+    assert view.get_scale() == 1.5
+    center = view.mapToScene(view.get_view_center())
+    # Scrollbars snap to integers, so allow a small deviation
+    assert center.x() == pytest.approx(1005.0, abs=1.5)
+    assert center.y() == pytest.approx(2005.0, abs=1.5)
+
+
+@patch('PyQt6.QtWidgets.QMainWindow.showFullScreen')
+def test_on_action_fullscreen_enter_without_stored_layout_keeps_view(
+        show_mock, view):
+    populate_scene(view)
+    view.scale(2, 2)
+    center_before = view.mapToScene(view.get_view_center())
+
+    view.on_action_fullscreen(True)
+
+    assert view.get_scale() == 2
+    assert view.mapToScene(view.get_view_center()) == center_before
+    assert view.scene.saved_view_state_windowed == view.get_view_state()
+
+
+def test_clear_scene_resets_view_states(view):
+    populate_scene(view)
+    view.scene.saved_view_state = {
+        'scale': 1.5, 'center_x': 10.0, 'center_y': 20.0}
+    view.scene.saved_view_state_fullscreen = {
+        'scale': 2.5, 'center_x': 30.0, 'center_y': 40.0}
+
+    view.clear_scene()
+
+    assert view.scene.saved_view_state is None
+    assert view.scene.saved_view_state_fullscreen is None
+
+
 @patch('beeref.widgets.welcome_overlay.WelcomeOverlay.cursor')
 def test_on_action_move_window_when_welcome_overlay(cursor_mock, view):
     cursor_mock.return_value = MagicMock(
