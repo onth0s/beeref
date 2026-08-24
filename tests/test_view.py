@@ -1854,6 +1854,160 @@ def test_mouse_release_movewin(mouse_event_mock, view):
     event.accept.assert_called_once_with()
 
 
+def make_view_frameless(view):
+    view.parent.setWindowFlag(Qt.WindowType.FramelessWindowHint, True)
+    view.mapToGlobal = lambda p: p
+    return view.main_window.frameGeometry()
+
+
+def test_resize_edges_for_pos_edges_and_center(view):
+    geo = make_view_frameless(view)
+    cx, cy = geo.center().x(), geo.center().y()
+    assert view.resize_edges_for_pos(
+        QtCore.QPointF(cx, geo.top() + 2)) == {'top'}
+    assert view.resize_edges_for_pos(
+        QtCore.QPointF(cx, geo.bottom() - 2)) == {'bottom'}
+    assert view.resize_edges_for_pos(
+        QtCore.QPointF(geo.left() + 2, cy)) == {'left'}
+    assert view.resize_edges_for_pos(
+        QtCore.QPointF(geo.right() - 2, cy)) == {'right'}
+    assert view.resize_edges_for_pos(QtCore.QPointF(cx, cy)) == set()
+
+
+def test_resize_edges_for_pos_corners(view):
+    geo = make_view_frameless(view)
+    assert view.resize_edges_for_pos(
+        QtCore.QPointF(geo.left() + 2, geo.top() + 2)) == {'left', 'top'}
+    assert view.resize_edges_for_pos(
+        QtCore.QPointF(geo.right() - 2, geo.top() + 2)) == {'right', 'top'}
+    assert view.resize_edges_for_pos(
+        QtCore.QPointF(geo.left() + 2, geo.bottom() - 2)) == {'left', 'bottom'}
+    assert view.resize_edges_for_pos(
+        QtCore.QPointF(geo.right() - 2,
+                       geo.bottom() - 2)) == {'right', 'bottom'}
+
+
+def test_resize_edges_for_pos_when_titlebar_visible(view):
+    geo = view.main_window.frameGeometry()
+    view.mapToGlobal = lambda p: p
+    assert view.resize_edges_for_pos(
+        QtCore.QPointF(geo.left() + 2, geo.top() + 2)) == set()
+
+
+def test_resize_edges_for_pos_when_fullscreen(view):
+    geo = make_view_frameless(view)
+    with patch.object(view.main_window, 'isFullScreen', return_value=True):
+        assert view.resize_edges_for_pos(
+            QtCore.QPointF(geo.left() + 2, geo.top() + 2)) == set()
+
+
+@patch('PyQt6.QtWidgets.QGraphicsView.mousePressEvent')
+def test_mouse_press_on_edge_starts_resizewin(mouse_event_mock, view):
+    geo = make_view_frameless(view)
+    event = MagicMock()
+    event.button.return_value = Qt.MouseButton.LeftButton
+    event.modifiers.return_value = None
+    event.position.return_value = QtCore.QPointF(
+        float(geo.right() - 2), float(geo.center().y()))
+
+    view.mousePressEvent(event)
+
+    assert view.resizewin_active is True
+    assert view.resizewin_edges == {'right'}
+    assert view.event_start_geometry == geo
+    assert view.viewport().cursor().shape() == Qt.CursorShape.SizeHorCursor
+    mouse_event_mock.assert_not_called()
+    event.accept.assert_called_once_with()
+
+
+@patch('PyQt6.QtWidgets.QGraphicsView.mousePressEvent')
+def test_mouse_press_on_edge_ignored_when_titlebar(mouse_event_mock, view):
+    geo = view.main_window.frameGeometry()
+    view.mapToGlobal = lambda p: p
+    event = MagicMock()
+    event.button.return_value = Qt.MouseButton.LeftButton
+    event.modifiers.return_value = None
+    event.position.return_value = QtCore.QPointF(
+        float(geo.left() + 2), float(geo.top() + 2))
+
+    view.mousePressEvent(event)
+
+    assert view.resizewin_active is False
+    mouse_event_mock.assert_called_once_with(event)
+    event.accept.assert_not_called()
+
+
+@patch('PyQt6.QtWidgets.QGraphicsView.mouseMoveEvent')
+def test_mouse_move_resizewin_right_bottom(mouse_event_mock, view):
+    view.parent.setWindowFlag(Qt.WindowType.FramelessWindowHint, True)
+    view.mapToGlobal = lambda p: p
+    view.resizewin_active = True
+    view.resizewin_edges = {'right', 'bottom'}
+    view.event_start = QtCore.QPointF(0.0, 0.0)
+    view.event_start_geometry = QtCore.QRect(100, 200, 400, 250)
+    event = MagicMock()
+    event.position.return_value = QtCore.QPointF(15.0, -10.0)
+
+    view.mouseMoveEvent(event)
+
+    assert view.main_window.geometry() == QtCore.QRect(100, 200, 415, 240)
+    mouse_event_mock.assert_not_called()
+    event.accept.assert_called_once_with()
+
+
+@patch('PyQt6.QtWidgets.QGraphicsView.mouseMoveEvent')
+def test_mouse_move_resizewin_left_clamped_to_min_width(
+        mouse_event_mock, view):
+    view.parent.setWindowFlag(Qt.WindowType.FramelessWindowHint, True)
+    view.mapToGlobal = lambda p: p
+    view.resizewin_active = True
+    view.resizewin_edges = {'left'}
+    view.event_start = QtCore.QPointF(0.0, 0.0)
+    view.event_start_geometry = QtCore.QRect(100, 200, 300, 150)
+    event = MagicMock()
+    event.position.return_value = QtCore.QPointF(250.0, 0.0)
+
+    view.mouseMoveEvent(event)
+
+    assert view.main_window.geometry() == QtCore.QRect(200, 200, 200, 150)
+    event.accept.assert_called_once_with()
+
+
+@patch('PyQt6.QtWidgets.QGraphicsView.mouseReleaseEvent')
+def test_mouse_release_resizewin(mouse_event_mock, view):
+    event = MagicMock()
+    view.resizewin_active = True
+    view.mouseReleaseEvent(event)
+    mouse_event_mock.assert_not_called()
+    assert view.resizewin_active is False
+    assert view.resizewin_edges == set()
+    event.accept.assert_called_once_with()
+
+
+@patch('PyQt6.QtWidgets.QGraphicsView.keyPressEvent')
+def test_key_press_when_resizewin_active(key_event_mock, view):
+    view.resizewin_active = True
+    view.keyPressEvent(MagicMock())
+    assert view.resizewin_active is False
+    key_event_mock.assert_not_called()
+
+
+@patch('PyQt6.QtWidgets.QGraphicsView.mouseMoveEvent')
+def test_hover_near_edge_sets_resize_cursor(mouse_event_mock, view):
+    geo = make_view_frameless(view)
+    event = MagicMock()
+    event.position.return_value = QtCore.QPointF(
+        float(geo.center().x()), float(geo.top() + 2))
+
+    view.mouseMoveEvent(event)
+    assert view.viewport().cursor().shape() == Qt.CursorShape.SizeVerCursor
+
+    event.position.return_value = QtCore.QPointF(
+        float(geo.center().x()), float(geo.center().y()))
+    view.mouseMoveEvent(event)
+    assert view.viewport().cursor().shape() == Qt.CursorShape.ArrowCursor
+
+
 @patch('PyQt6.QtWidgets.QGraphicsView.mouseReleaseEvent')
 def test_mouse_release_unhandled(mouse_event_mock, view):
     event = MagicMock()

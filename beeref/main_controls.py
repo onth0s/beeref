@@ -30,8 +30,11 @@ class MainControlsMixin:
 
     * Right-click menu
     * Dropping files
-    * Moving the window without title bar
+    * Moving and resizing the window without title bar
     """
+
+    RESIZE_MARGIN = 6
+    MIN_WINDOW_SIZE = QtCore.QSize(200, 150)
 
     def init_main_controls(self, main_window):
         self.main_window = main_window
@@ -40,6 +43,12 @@ class MainControlsMixin:
             self.control_target.on_context_menu)
         self.setAcceptDrops(True)
         self.movewin_active = False
+        self.resizewin_active = False
+        self.resizewin_edges = set()
+        self.last_resizewin_cursor = None
+        # Needed for hover feedback on the resize edges
+        self.setMouseTracking(True)
+        self.viewport_or_self.setMouseTracking(True)
 
     def on_action_movewin_mode(self):
         if self.movewin_active:
@@ -56,8 +65,8 @@ class MainControlsMixin:
 
     def enter_movewin_mode(self):
         logger.debug('Entering movewin mode')
-        self.setMouseTracking(True)
         self.movewin_active = True
+        self.last_resizewin_cursor = None
         self.viewport_or_self.setCursor(Qt.CursorShape.SizeAllCursor)
         self.event_start = QtCore.QPointF(self.cursor().pos())
         if hasattr(self, 'disable_mouse_events'):
@@ -65,11 +74,102 @@ class MainControlsMixin:
 
     def exit_movewin_mode(self):
         logger.debug('Exiting movewin mode')
-        self.setMouseTracking(False)
         self.movewin_active = False
+        self.last_resizewin_cursor = None
         self.viewport_or_self.unsetCursor()
         if hasattr(self, 'enable_mouse_events'):
             self.enable_mouse_events()
+
+    @property
+    def resizewin_possible(self):
+        """Resizing is only possible on frameless, non-fullscreen
+        windows."""
+        win = self.main_window
+        return bool(
+            win.windowFlags() & Qt.WindowType.FramelessWindowHint
+            and not win.isFullScreen())
+
+    def resize_edges_for_pos(self, pos):
+        """Return the edges ('left', 'right', 'top', 'bottom') of the
+        window the given global position is within RESIZE_MARGIN
+        pixels of."""
+        if not self.resizewin_possible:
+            return set()
+        geo = self.main_window.frameGeometry()
+        x, y = pos.x(), pos.y()
+        edges = set()
+        if abs(x - geo.left()) <= self.RESIZE_MARGIN:
+            edges.add('left')
+        elif abs(x - geo.right()) <= self.RESIZE_MARGIN:
+            edges.add('right')
+        if abs(y - geo.top()) <= self.RESIZE_MARGIN:
+            edges.add('top')
+        elif abs(y - geo.bottom()) <= self.RESIZE_MARGIN:
+            edges.add('bottom')
+        return edges
+
+    def resize_cursor_for_edges(self, edges):
+        if 'left' in edges or 'right' in edges:
+            if 'top' in edges or 'bottom' in edges:
+                if ('left' in edges) == ('top' in edges):
+                    return Qt.CursorShape.SizeFDiagCursor
+                return Qt.CursorShape.SizeBDiagCursor
+            return Qt.CursorShape.SizeHorCursor
+        if 'top' in edges or 'bottom' in edges:
+            return Qt.CursorShape.SizeVerCursor
+        return None
+
+    def enter_resizewin_mode(self, edges, event):
+        logger.debug(f'Entering resizewin mode: {sorted(edges)}')
+        self.resizewin_active = True
+        self.resizewin_edges = edges
+        self.last_resizewin_cursor = None
+        self.event_start = QtCore.QPointF(self.mapToGlobal(event.position()))
+        self.event_start_geometry = QtCore.QRect(
+            self.main_window.frameGeometry())
+        cursor = self.resize_cursor_for_edges(edges)
+        if cursor is not None:
+            self.viewport_or_self.setCursor(cursor)
+
+    def exit_resizewin_mode(self):
+        logger.debug('Exiting resizewin mode')
+        self.resizewin_active = False
+        self.resizewin_edges = set()
+        self.last_resizewin_cursor = None
+        self.viewport_or_self.unsetCursor()
+
+    def apply_resizewin_delta(self, pos):
+        win = self.main_window
+        geo = QtCore.QRect(self.event_start_geometry)
+        min_w = max(win.minimumWidth(), self.MIN_WINDOW_SIZE.width())
+        min_h = max(win.minimumHeight(), self.MIN_WINDOW_SIZE.height())
+        delta = pos - self.event_start
+        edges = self.resizewin_edges
+        if 'left' in edges:
+            geo.setLeft(min(round(geo.left() + delta.x()),
+                            geo.right() - min_w + 1))
+        if 'right' in edges:
+            geo.setRight(max(round(geo.right() + delta.x()),
+                             geo.left() + min_w - 1))
+        if 'top' in edges:
+            geo.setTop(min(round(geo.top() + delta.y()),
+                           geo.bottom() - min_h + 1))
+        if 'bottom' in edges:
+            geo.setBottom(max(round(geo.bottom() + delta.y()),
+                              geo.top() + min_h - 1))
+        win.setGeometry(geo)
+
+    def update_resizewin_cursor(self, event):
+        cursor = self.resize_cursor_for_edges(
+            self.resize_edges_for_pos(self.mapToGlobal(event.position())))
+        if cursor == self.last_resizewin_cursor:
+            return
+        viewport = self.viewport_or_self
+        if cursor is not None:
+            viewport.setCursor(cursor)
+        else:
+            viewport.unsetCursor()
+        self.last_resizewin_cursor = cursor
 
     def dragEnterEvent(self, event):
         mimedata = event.mimeData()
@@ -122,6 +222,14 @@ class MainControlsMixin:
             event.accept()
             return True
 
+        if self.resizewin_possible:
+            edges = self.resize_edges_for_pos(
+                self.mapToGlobal(event.position()))
+            if edges:
+                self.enter_resizewin_mode(edges, event)
+                event.accept()
+                return True
+
     def mouseMoveEventMainControls(self, event):
         if self.movewin_active:
             pos = self.mapToGlobal(event.position())
@@ -132,14 +240,30 @@ class MainControlsMixin:
             event.accept()
             return True
 
+        if self.resizewin_active:
+            self.apply_resizewin_delta(
+                QtCore.QPointF(self.mapToGlobal(event.position())))
+            event.accept()
+            return True
+
+        self.update_resizewin_cursor(event)
+
     def mouseReleaseEventMainControls(self, event):
         if self.movewin_active:
             self.exit_movewin_mode()
+            event.accept()
+            return True
+        if self.resizewin_active:
+            self.exit_resizewin_mode()
             event.accept()
             return True
 
     def keyPressEventMainControls(self, event):
         if self.movewin_active:
             self.exit_movewin_mode()
+            event.accept()
+            return True
+        if self.resizewin_active:
+            self.exit_resizewin_mode()
             event.accept()
             return True
