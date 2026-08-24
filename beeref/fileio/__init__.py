@@ -43,13 +43,15 @@ def load_bee(filename, scene, worker=None):
 
 
 def save_bee(filename, scene, create_new=False, worker=None,
-             view_state=None, view_state_fullscreen=None):
+             view_state=None, view_state_fullscreen=None,
+             saved_fullscreen=False):
     """Save BeeRef native file."""
     logger.info(f'Saving to file {filename}...')
     logger.debug(f'Create new: {create_new}')
     io = SQLiteIO(filename, scene, create_new, worker=worker,
                   view_state=view_state,
-                  view_state_fullscreen=view_state_fullscreen)
+                  view_state_fullscreen=view_state_fullscreen,
+                  saved_fullscreen=saved_fullscreen)
     io.write()
     logger.info('End save')
 

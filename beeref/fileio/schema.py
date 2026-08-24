@@ -1,4 +1,4 @@
-USER_VERSION = 4
+USER_VERSION = 5
 APPLICATION_ID = 2060242126
 
 
@@ -46,6 +46,12 @@ SCHEMA = [
         center_y REAL DEFAULT 0
     )
     """,
+    """
+    CREATE TABLE window_state (
+        id INTEGER PRIMARY KEY CHECK (id = 1),
+        saved_fullscreen INTEGER DEFAULT 0
+    )
+    """,
 ]
 
 
@@ -71,6 +77,14 @@ MIGRATIONS = {
             scale REAL DEFAULT 1,
             center_x REAL DEFAULT 0,
             center_y REAL DEFAULT 0
+        )
+        """,
+    ],
+    5: [
+        """
+        CREATE TABLE window_state (
+            id INTEGER PRIMARY KEY CHECK (id = 1),
+            saved_fullscreen INTEGER DEFAULT 0
         )
         """,
     ],

@@ -172,6 +172,7 @@ class BeeGraphicsView(MainControlsMixin,
         self.scene.saved_view_state = None
         self.scene.saved_view_state_fullscreen = None
         self.scene.saved_view_state_windowed = None
+        self.scene.saved_window_fullscreen = False
         self.undo_stack.clear()
         self.filename = None
         self.setTransform(QtGui.QTransform())
@@ -420,6 +421,17 @@ class BeeGraphicsView(MainControlsMixin,
             self.scene.add_queued_items()
             if not self.apply_saved_view_state():
                 self.on_action_fit_scene()
+            # Put the document back the way it looked when it was saved
+            if self.scene.saved_window_fullscreen:
+                if not self.parent.isFullScreen():
+                    # Re-enter fullscreen; on_action_fullscreen applies
+                    # the stored fullscreen layout and handles the
+                    # viewport resize of the mode switch
+                    self.on_action_fullscreen(True)
+                elif self.scene.saved_view_state_fullscreen:
+                    # Already fullscreen: just apply the saved layout
+                    self.apply_view_state(
+                        self.scene.saved_view_state_fullscreen)
 
     def on_action_open_recent_file(self, filename):
         confirm = self.get_confirmation_unsaved_changes(
@@ -487,7 +499,8 @@ class BeeGraphicsView(MainControlsMixin,
         self.worker = fileio.ThreadedIO(
             fileio.save_bee, filename, self.scene, create_new=create_new,
             view_state=view_state,
-            view_state_fullscreen=view_state_fullscreen)
+            view_state_fullscreen=view_state_fullscreen,
+            saved_fullscreen=self.parent.isFullScreen())
         self.worker.finished.connect(self.on_saving_finished)
         self.progress = widgets.BeeProgressDialog(
             f'Saving {filename}',

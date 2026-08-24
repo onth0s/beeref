@@ -1436,12 +1436,108 @@ def test_clear_scene_resets_view_states(view):
         'scale': 1.5, 'center_x': 10.0, 'center_y': 20.0}
     view.scene.saved_view_state_fullscreen = {
         'scale': 2.5, 'center_x': 30.0, 'center_y': 40.0}
+    view.scene.saved_window_fullscreen = True
 
     view.clear_scene()
 
     assert view.scene.saved_view_state is None
     assert view.scene.saved_view_state_fullscreen is None
     assert view.scene.saved_view_state_windowed is None
+    assert view.scene.saved_window_fullscreen is False
+
+
+@patch('PyQt6.QtWidgets.QMainWindow.showFullScreen')
+def test_load_restores_saved_fullscreen_mode_and_layout(
+        show_mock, view, qtbot, item, tmpfile):
+    item.setPos(500, 800)
+    view.scene.addItem(item)
+    view.parent.resize(QtCore.QSize(800, 600))
+    view.scale(3, 3)
+    view.centerOn(QtCore.QPointF(510, 815))
+    fs_saved = view.get_view_state()
+
+    with patch('PyQt6.QtWidgets.QMainWindow.isFullScreen',
+               return_value=True):
+        view.do_save(tmpfile, True)
+        view.worker.wait()
+    path = f'{tmpfile}.bee'
+
+    # "New session": reopen the file while windowed
+    def fake_show():
+        view.parent.resize(QtCore.QSize(1600, 900))
+    show_mock.side_effect = fake_show
+    view.clear_scene()
+    view.open_from_file(path)
+    view.worker.wait()
+    qtbot.waitUntil(lambda: view.filename == path)
+    qtbot.wait(100)
+
+    # The app went fullscreen again by itself and shows the layout
+    # from save time
+    assert show_mock.called is True
+    assert view.get_scale() == pytest.approx(fs_saved['scale'])
+    center = view.mapToScene(view.get_view_center())
+    assert center.x() == pytest.approx(fs_saved['center_x'], abs=1.5)
+    assert center.y() == pytest.approx(fs_saved['center_y'], abs=1.5)
+
+
+@patch('PyQt6.QtWidgets.QMainWindow.showFullScreen')
+def test_load_of_windowed_save_stays_windowed(show_mock, view, qtbot,
+                                              item, tmpfile):
+    item.setPos(500, 800)
+    view.scene.addItem(item)
+    view.parent.resize(QtCore.QSize(800, 600))
+    view.scale(2, 2)
+    view.centerOn(QtCore.QPointF(510, 815))
+    win_saved = view.get_view_state()
+    assert win_saved is not None
+
+    view.do_save(tmpfile, True)
+    view.worker.wait()
+    path = f'{tmpfile}.bee'
+
+    view.clear_scene()
+    view.open_from_file(path)
+    view.worker.wait()
+    qtbot.waitUntil(lambda: view.filename == path)
+    qtbot.wait(100)
+
+    assert show_mock.called is False
+    loaded = view.get_view_state()
+    assert loaded['scale'] == pytest.approx(win_saved['scale'])
+    center = view.mapToScene(view.get_view_center())
+    assert center.x() == pytest.approx(win_saved['center_x'], abs=1.5)
+    assert center.y() == pytest.approx(win_saved['center_y'], abs=1.5)
+
+
+@patch('PyQt6.QtWidgets.QMainWindow.isFullScreen', return_value=True)
+@patch('PyQt6.QtWidgets.QMainWindow.showFullScreen')
+def test_load_while_already_fullscreen_skips_retoggle(
+        show_mock, fs_mock, view, qtbot, item, tmpfile):
+    item.setPos(500, 800)
+    view.scene.addItem(item)
+    view.parent.resize(QtCore.QSize(800, 600))
+    view.scale(3, 3)
+    view.centerOn(QtCore.QPointF(510, 815))
+    fs_saved = view.get_view_state()
+
+    view.do_save(tmpfile, True)
+    view.worker.wait()
+    path = f'{tmpfile}.bee'
+
+    # Still fullscreen in this session: no retoggle needed, but the
+    # fullscreen layout must be applied instead of the windowed one
+    view.clear_scene()
+    view.open_from_file(path)
+    view.worker.wait()
+    qtbot.waitUntil(lambda: view.filename == path)
+    qtbot.wait(100)
+
+    assert show_mock.called is False
+    assert view.get_scale() == pytest.approx(fs_saved['scale'])
+    center = view.mapToScene(view.get_view_center())
+    assert center.x() == pytest.approx(fs_saved['center_x'], abs=1.5)
+    assert center.y() == pytest.approx(fs_saved['center_y'], abs=1.5)
 
 
 def test_save_and_reopen_preserves_canvas_layout(view, qtbot, tmpfile, item):

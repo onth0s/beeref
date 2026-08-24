@@ -74,7 +74,8 @@ def handle_sqlite_errors(func):
 class SQLiteIO:
 
     def __init__(self, filename, scene, create_new=False, readonly=False,
-                 worker=None, view_state=None, view_state_fullscreen=None):
+                 worker=None, view_state=None, view_state_fullscreen=None,
+                 saved_fullscreen=False):
         self.scene = scene
         self.create_new = create_new
         self.filename = filename
@@ -82,6 +83,7 @@ class SQLiteIO:
         self.worker = worker
         self.view_state = view_state
         self.view_state_fullscreen = view_state_fullscreen
+        self.saved_fullscreen = saved_fullscreen
         self.retry = False
 
     def __del__(self):
@@ -193,6 +195,7 @@ class SQLiteIO:
     def read(self):
         self.scene.saved_view_state = None
         self.scene.saved_view_state_fullscreen = None
+        self.scene.saved_window_fullscreen = False
         canvas_row = self.fetchone(
             'SELECT scale, center_x, center_y FROM canvas')
         if canvas_row:
@@ -209,6 +212,10 @@ class SQLiteIO:
                 'center_x': fullscreen_row[1],
                 'center_y': fullscreen_row[2],
             }
+        window_row = self.fetchone(
+            'SELECT saved_fullscreen FROM window_state')
+        if window_row:
+            self.scene.saved_window_fullscreen = bool(window_row[0])
 
         rows = self.fetchall(
             'SELECT items.id, type, x, y, z, scale, rotation, flip, '
@@ -334,6 +341,14 @@ class SQLiteIO:
                  self.view_state_fullscreen['center_y']))
         else:
             self.ex('DELETE FROM canvas_fullscreen')
+        self.ex(
+            'CREATE TABLE IF NOT EXISTS window_state ('
+            'id INTEGER PRIMARY KEY CHECK (id = 1), '
+            'saved_fullscreen INTEGER DEFAULT 0)')
+        self.ex(
+            'INSERT OR REPLACE INTO window_state (id, saved_fullscreen) '
+            'VALUES (1, ?)',
+            (int(self.saved_fullscreen),))
         self.connection.commit()
         self.ex('VACUUM')
         if self.worker:
