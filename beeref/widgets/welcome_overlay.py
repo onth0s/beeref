@@ -25,6 +25,19 @@ from beeref.thumbnails import get_thumbnail
 
 logger = logging.getLogger(__name__)
 
+# Recents grid geometry. Single source of truth: the card sizes itself from
+# these and the layout derives its spacing from them, so they cannot drift.
+CARD_WIDTH = 150
+CARD_HEIGHT = 140
+THUMB_WIDTH = 138
+THUMB_HEIGHT = 95
+GRID_SPACING = 10
+GRID_MARGIN = 6
+CLOSE_BTN_SIZE = 22
+# The grid is responsive: it uses as many columns as fit the available
+# width, but never fewer than one and never more than this.
+MAX_COLUMNS = 5
+
 
 class RecentFileCard(QtWidgets.QFrame):
     """Widget card displaying thumbnail, file name, and an on-hover 'X' remove button."""
@@ -36,7 +49,7 @@ class RecentFileCard(QtWidgets.QFrame):
         super().__init__(parent)
         self.filepath = filepath
         self.setMouseTracking(True)
-        self.setFixedSize(150, 140)
+        self.setFixedSize(CARD_WIDTH, CARD_HEIGHT)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
 
         self.setStyleSheet("""
@@ -52,16 +65,18 @@ class RecentFileCard(QtWidgets.QFrame):
         """)
 
         layout = QtWidgets.QVBoxLayout(self)
-        layout.setContentsMargins(6, 6, 6, 6)
+        layout.setContentsMargins(GRID_MARGIN, GRID_MARGIN, GRID_MARGIN,
+                                  GRID_MARGIN)
         layout.setSpacing(4)
 
         # Thumbnail Label
         self.thumb_label = QtWidgets.QLabel(self)
-        self.thumb_label.setFixedSize(138, 95)
+        self.thumb_label.setFixedSize(THUMB_WIDTH, THUMB_HEIGHT)
         self.thumb_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.thumb_label.setStyleSheet("border-radius: 4px; background-color: rgba(0, 0, 0, 0.2);")
 
-        pix = get_thumbnail(self.filepath, QtCore.QSize(138, 95))
+        pix = get_thumbnail(self.filepath,
+                            QtCore.QSize(THUMB_WIDTH, THUMB_HEIGHT))
         if pix and not pix.isNull():
             self.thumb_label.setPixmap(pix)
         else:
@@ -79,14 +94,15 @@ class RecentFileCard(QtWidgets.QFrame):
         self.name_label.setFont(font)
 
         metrics = QtGui.QFontMetrics(font)
-        elided = metrics.elidedText(filename, Qt.TextElideMode.ElideMiddle, 130)
+        elided = metrics.elidedText(filename, Qt.TextElideMode.ElideMiddle,
+                                    CARD_WIDTH - 2 * GRID_MARGIN - 4)
         self.name_label.setText(elided)
 
         layout.addWidget(self.name_label)
 
         # On-hover 'X' close button
         self.close_btn = QtWidgets.QPushButton("✕", self)
-        self.close_btn.setFixedSize(22, 22)
+        self.close_btn.setFixedSize(CLOSE_BTN_SIZE, CLOSE_BTN_SIZE)
         self.close_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self.close_btn.setToolTip("Remove from recent files")
         self.close_btn.setStyleSheet("""
@@ -103,7 +119,7 @@ class RecentFileCard(QtWidgets.QFrame):
                 color: #ffffff;
             }
         """)
-        self.close_btn.move(122, 6)
+        self.close_btn.move(CARD_WIDTH - CLOSE_BTN_SIZE - 4, 4)
         self.close_btn.hide()
         self.close_btn.clicked.connect(self.on_close_clicked)
 
@@ -125,60 +141,110 @@ class RecentFileCard(QtWidgets.QFrame):
         super().mousePressEvent(event)
 
 
-class RecentFilesView(QtWidgets.QWidget):
-    """Grid container for RecentFileCard widgets that wraps into columns based on width."""
+class RecentFilesView(QtWidgets.QScrollArea):
+    """Scrollable, responsive grid of RecentFileCard widgets.
+
+    Cards are a fixed size and are never shrunk. The grid uses as many
+    columns as fit the available width (1 when the window is narrow, up to
+    MAX_COLUMNS otherwise) and scrolls vertically instead of squeezing the
+    cards into an overlapping pile. The block of columns stays horizontally
+    centered.
+    """
 
     def __init__(self, parent, view, files=None):
         super().__init__(parent)
         self.view = view
         self.files = files or []
 
-        self.grid_layout = QtWidgets.QGridLayout(self)
-        self.grid_layout.setContentsMargins(0, 0, 0, 0)
-        self.grid_layout.setSpacing(10)
+        self.setWidgetResizable(True)
+        self.setFrameShape(QtWidgets.QFrame.Shape.NoFrame)
+        self.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        # The grid never needs to scroll horizontally: its column count is
+        # derived from the viewport width, so it always fits.
+        self.setHorizontalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.setVerticalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        # Enough room for a single card plus its grid padding, so a card is
+        # always fully visible even in the smallest allowed window.
+        self.setMinimumHeight(CARD_HEIGHT + 2 * GRID_MARGIN)
+        # A QScrollArea's own size hint does not account for its widget, so
+        # without an explicit minimum the section would be squeezed to the
+        # point that the card no longer fits in the viewport.
+        self.setMinimumWidth(
+            CARD_WIDTH + 2 * GRID_MARGIN
+            + self.verticalScrollBar().sizeHint().width())
 
+        self._grid_parent = QtWidgets.QWidget(self)
+        self.grid_layout = QtWidgets.QGridLayout(self._grid_parent)
+        self.grid_layout.setContentsMargins(GRID_MARGIN, GRID_MARGIN,
+                                             GRID_MARGIN, GRID_MARGIN)
+        self.grid_layout.setSpacing(GRID_SPACING)
+        self.grid_layout.setAlignment(
+            Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignTop)
+        self.setWidget(self._grid_parent)
+
+        self._cards = []
+        self._columns = 1
         self.update_files(self.files)
 
     def update_files(self, files):
-        self.files = files
-        while self.grid_layout.count():
-            child = self.grid_layout.takeAt(0)
-            if child.widget():
-                child.widget().deleteLater()
+        self.files = list(files)
         self.relayout()
 
+    def column_count(self):
+        """Number of columns that fit the viewport, clamped to 1..MAX_COLUMNS."""
+        available = self.viewport().width() - 2 * GRID_MARGIN
+        if available < CARD_WIDTH:
+            return 1
+        return max(1, min(MAX_COLUMNS,
+                          (available + GRID_SPACING)
+                          // (CARD_WIDTH + GRID_SPACING)))
+
+    def _place_cards(self):
+        """Lay the existing cards out in the current number of columns."""
+        # Assign self._columns before touching the layout: re-adding widgets
+        # invalidates it and can deliver a nested resize event, which would
+        # otherwise recurse because the column count still looked stale.
+        self._columns = self.column_count()
+        for card in self._cards:
+            self.grid_layout.removeWidget(card)
+        for i, card in enumerate(self._cards):
+            self.grid_layout.addWidget(
+                card, i // self._columns, i % self._columns)
 
     def relayout(self):
-        # Detach existing items without deleting their C++ backing objects
-        cards = []
-        while self.grid_layout.count():
-            child = self.grid_layout.takeAt(0)
-            if child.widget():
-                cards.append(child.widget())
+        """Rebuild the card widgets and lay them out from scratch.
 
-        # If cards list is empty, instantiate for self.files
-        if not cards:
-            for filepath in self.files:
-                card = RecentFileCard(filepath, self)
-                card.remove_requested.connect(self.on_remove_file)
-                card.open_requested.connect(self.on_open_file)
-                cards.append(card)
+        Old cards are hidden and unparented explicitly rather than just
+        scheduled for deletion, so their removal cannot be delayed by the
+        garbage collector holding a reference, and a card can never linger
+        as a stale, still-painted child on top of a new one.
+        """
+        for card in self._cards:
+            self.grid_layout.removeWidget(card)
+            # Hide before unparenting: setParent(None) would otherwise turn
+            # the still-visible card into a top-level window for a moment.
+            card.hide()
+            card.setParent(None)
+            card.deleteLater()
+        self._cards = []
 
-        # Calculate columns based on width
-        card_w = 150
-        spacing = 10
-        width = max(self.width(), card_w)
-        cols = max(1, min(3, (width + spacing) // (card_w + spacing)))
+        for filepath in self.files:
+            card = RecentFileCard(filepath, self._grid_parent)
+            card.remove_requested.connect(self.on_remove_file)
+            card.open_requested.connect(self.on_open_file)
+            self._cards.append(card)
 
-        for i, card in enumerate(cards):
-            row = i // cols
-            col = i % cols
-            self.grid_layout.addWidget(card, row, col)
+        self._place_cards()
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
-        self.relayout()
-
+        # Reflow into more or fewer columns as the window grows and shrinks.
+        # Rebuilding the cards is neither necessary nor safe here; only the
+        # placement changes.
+        if self._cards and self.column_count() != self._columns:
+            self._place_cards()
 
     def on_open_file(self, filepath):
         self.view.open_from_file(filepath)
@@ -241,19 +307,21 @@ class WelcomeOverlay(MainControlsMixin, QtWidgets.QWidget):
         files_vbox.addLayout(header_box)
 
         self.files_view = RecentFilesView(self.files_widget, parent)
-        files_vbox.addWidget(self.files_view)
+        files_vbox.addWidget(self.files_view, 1)
         self.files_widget.hide()
 
         # Help text label
         self.label = QtWidgets.QLabel(self.txt, self)
         self.label.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        # Main horizontal layout
-        self.layout = QtWidgets.QHBoxLayout(self)
+        # Main layout: the recent files section is inserted at index 0 by
+        # refresh_recents(). A plain QHBoxLayout with fixed stretches used to
+        # starve the section of width, which is what made the cards overlap;
+        # it is now centered explicitly on both axes.
+        self.layout = QtWidgets.QVBoxLayout(self)
         self.layout.setContentsMargins(40, 20, 40, 20)
-        self.layout.addStretch(50)
-        self.layout.addWidget(self.label, alignment=Qt.AlignmentFlag.AlignVCenter)
-        self.layout.addStretch(50)
+        self.layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.layout.addWidget(self.label)
 
 
     def refresh_recents(self):
@@ -264,7 +332,7 @@ class WelcomeOverlay(MainControlsMixin, QtWidgets.QWidget):
 
         if files:
             if self.layout.indexOf(self.files_widget) < 0:
-                self.layout.insertWidget(0, self.files_widget, alignment=Qt.AlignmentFlag.AlignVCenter)
+                self.layout.insertWidget(0, self.files_widget)
             self.files_widget.show()
         else:
             if self.layout.indexOf(self.files_widget) >= 0:

@@ -21,6 +21,11 @@ COPYRIGHT = 'Copyright © 2021-2024 Rebecca Breu'
 
 CHANGED_SYMBOL = '✎'
 
+# Minimum window size that allows recent files to display properly.
+# Derived from the welcome overlay's minimum size hint (259x273) plus a
+# little breathing room, so a full-size recent files card always fits.
+MIN_WINDOW_SIZE = (270, 290)
+
 COLORS = {
     # Qt:
     'Active:Base': (60, 60, 60),

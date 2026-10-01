@@ -19,7 +19,7 @@ import os
 from PyQt6 import QtCore, QtGui
 from PyQt6.QtCore import Qt
 
-from beeref import commands, fileio, widgets
+from beeref import commands, constants, fileio, widgets
 from beeref.items import BeePixmapItem
 
 logger = logging.getLogger(__name__)
@@ -34,7 +34,9 @@ class MainControlsMixin:
     """
 
     RESIZE_MARGIN = 6
-    MIN_WINDOW_SIZE = QtCore.QSize(200, 150)
+    # Large enough that a full-size recent files card plus its header, help
+    # text and padding always fit, so cards are never cut off or squeezed.
+    MIN_WINDOW_SIZE = QtCore.QSize(*constants.MIN_WINDOW_SIZE)
 
     def init_main_controls(self, main_window):
         self.main_window = main_window

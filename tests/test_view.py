@@ -2390,6 +2390,8 @@ def test_mouse_press_on_edge_ignored_when_titlebar(mouse_event_mock, view):
 
 @patch('PyQt6.QtWidgets.QGraphicsView.mouseMoveEvent')
 def test_mouse_move_resizewin_right_bottom(mouse_event_mock, view):
+    from beeref.main_controls import MainControlsMixin
+    min_size = MainControlsMixin.MIN_WINDOW_SIZE
     view.parent.setWindowFlag(Qt.WindowType.FramelessWindowHint, True)
     view.mapToGlobal = lambda p: p
     view.resizewin_active = True
@@ -2401,7 +2403,9 @@ def test_mouse_move_resizewin_right_bottom(mouse_event_mock, view):
 
     view.mouseMoveEvent(event)
 
-    assert view.main_window.geometry() == QtCore.QRect(100, 200, 415, 240)
+    # The height shrinks freely, but not below the minimum window height
+    assert view.main_window.geometry() == QtCore.QRect(
+        100, 200, 415, min_size.height())
     mouse_event_mock.assert_not_called()
     event.accept.assert_called_once_with()
 
@@ -2409,6 +2413,8 @@ def test_mouse_move_resizewin_right_bottom(mouse_event_mock, view):
 @patch('PyQt6.QtWidgets.QGraphicsView.mouseMoveEvent')
 def test_mouse_move_resizewin_left_clamped_to_min_width(
         mouse_event_mock, view):
+    from beeref.main_controls import MainControlsMixin
+    min_size = MainControlsMixin.MIN_WINDOW_SIZE
     view.parent.setWindowFlag(Qt.WindowType.FramelessWindowHint, True)
     view.mapToGlobal = lambda p: p
     view.resizewin_active = True
@@ -2420,7 +2426,10 @@ def test_mouse_move_resizewin_left_clamped_to_min_width(
 
     view.mouseMoveEvent(event)
 
-    assert view.main_window.geometry() == QtCore.QRect(200, 200, 200, 150)
+    # The left edge is clamped so the window never gets narrower than
+    # the minimum width
+    assert view.main_window.geometry() == QtCore.QRect(
+        130, 200, min_size.width(), min_size.height())
     event.accept.assert_called_once_with()
 
 
