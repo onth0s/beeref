@@ -33,10 +33,21 @@ class MainControlsMixin:
     * Moving and resizing the window without title bar
     """
 
-    RESIZE_MARGIN = 6
+    # Thickness of the window's resize area when the title bar is
+    # hidden. Matches the native Windows frame so the edge is about as
+    # easy to grab as it would be with a title bar.
+    RESIZE_MARGIN = 8
     # Large enough that a full-size recent files card plus its header, help
     # text and padding always fit, so cards are never cut off or squeezed.
     MIN_WINDOW_SIZE = QtCore.QSize(*constants.MIN_WINDOW_SIZE)
+
+    # Window manipulation state. Declared here so the mixin is usable
+    # before (or without) init_main_controls, e.g. for the cursor
+    # guard, which can be queried as soon as signals are connected.
+    movewin_active = False
+    resizewin_active = False
+    resizewin_edges = frozenset()
+    last_resizewin_cursor = None
 
     def init_main_controls(self, main_window):
         self.main_window = main_window
@@ -91,24 +102,64 @@ class MainControlsMixin:
             win.windowFlags() & Qt.WindowType.FramelessWindowHint
             and not win.isFullScreen())
 
-    def resize_edges_for_pos(self, pos):
-        """Return the edges ('left', 'right', 'top', 'bottom') of the
-        window the given global position is within RESIZE_MARGIN
-        pixels of."""
+    @property
+    def cursor_owned_by_resize(self):
+        """Whether the window's resize area currently owns the cursor.
+
+        Item hover events are delivered *after* the mouse move event,
+        so without this guard an image's own cursor (e.g. the scale
+        cursor of a selected item whose border touches the window
+        border) would overwrite the resize cursor right at the window
+        edge, making the window look unresizable.
+        """
+        return self.resizewin_active or bool(self.resize_edges_at_cursor())
+
+    def resize_edges_at_cursor(self):
+        """The edges of the resize area the mouse cursor is currently
+        over.
+
+        This asks for the real cursor position instead of reusing the
+        position of the last mouse move event, because item hover and
+        mouse move events do not necessarily arrive in the same order,
+        so a cached position may be one event behind and let an item
+        grab the cursor at the very window edge.
+        """
         if not self.resizewin_possible:
             return set()
-        geo = self.main_window.frameGeometry()
+        local_pos = self.viewport_or_self.mapFromGlobal(QtGui.QCursor.pos())
+        return self.edges_within_margin(self.viewport_or_self.rect(), local_pos)
+
+    def edges_within_margin(self, rect, pos):
+        """Return the edges ('left', 'right', 'top', 'bottom') of the
+        given rect that the given position within it is less than
+        RESIZE_MARGIN pixels away from."""
         x, y = pos.x(), pos.y()
         edges = set()
-        if abs(x - geo.left()) <= self.RESIZE_MARGIN:
+        if x < rect.left() + self.RESIZE_MARGIN:
             edges.add('left')
-        elif abs(x - geo.right()) <= self.RESIZE_MARGIN:
+        elif x > rect.right() - self.RESIZE_MARGIN:
             edges.add('right')
-        if abs(y - geo.top()) <= self.RESIZE_MARGIN:
+        if y < rect.top() + self.RESIZE_MARGIN:
             edges.add('top')
-        elif abs(y - geo.bottom()) <= self.RESIZE_MARGIN:
+        elif y > rect.bottom() - self.RESIZE_MARGIN:
             edges.add('bottom')
         return edges
+
+    def resize_edges_for_local_pos(self, pos):
+        """Return the edges ('left', 'right', 'top', 'bottom') of the
+        window the given position is within RESIZE_MARGIN pixels of.
+
+        The position is given in the control target's own coordinate
+        system (i.e. the viewport for the view, the widget itself for
+        the welcome overlay). Both of them fill the entire window, so
+        this stays correct regardless of menu bars, scroll bars or
+        frames -- unlike measuring against the window's global frame
+        geometry, which is off by however much the client area is
+        inset.
+        """
+        if not self.resizewin_possible:
+            return set()
+        return self.edges_within_margin(self.viewport_or_self.rect(), pos)
 
     def resize_cursor_for_edges(self, edges):
         if 'left' in edges or 'right' in edges:
@@ -121,24 +172,29 @@ class MainControlsMixin:
             return Qt.CursorShape.SizeVerCursor
         return None
 
+    def apply_resize_cursor(self, cursor):
+        """Set the cursor of the control target to the resize cursor for
+        the given edges, or remove the override for ``None``."""
+        if cursor is None:
+            self.viewport_or_self.unsetCursor()
+        else:
+            self.viewport_or_self.setCursor(cursor)
+        self.last_resizewin_cursor = cursor
+
     def enter_resizewin_mode(self, edges, event):
         logger.debug(f'Entering resizewin mode: {sorted(edges)}')
         self.resizewin_active = True
         self.resizewin_edges = edges
-        self.last_resizewin_cursor = None
         self.event_start = QtCore.QPointF(self.mapToGlobal(event.position()))
         self.event_start_geometry = QtCore.QRect(
             self.main_window.frameGeometry())
-        cursor = self.resize_cursor_for_edges(edges)
-        if cursor is not None:
-            self.viewport_or_self.setCursor(cursor)
+        self.apply_resize_cursor(self.resize_cursor_for_edges(edges))
 
     def exit_resizewin_mode(self):
         logger.debug('Exiting resizewin mode')
         self.resizewin_active = False
         self.resizewin_edges = set()
-        self.last_resizewin_cursor = None
-        self.viewport_or_self.unsetCursor()
+        self.apply_resize_cursor(None)
 
     def apply_resizewin_delta(self, pos):
         win = self.main_window
@@ -162,16 +218,18 @@ class MainControlsMixin:
         win.setGeometry(geo)
 
     def update_resizewin_cursor(self, event):
-        cursor = self.resize_cursor_for_edges(
-            self.resize_edges_for_pos(self.mapToGlobal(event.position())))
-        if cursor == self.last_resizewin_cursor:
+        edges = self.resize_edges_for_local_pos(event.position())
+        cursor = self.resize_cursor_for_edges(edges)
+        if not edges and cursor == self.last_resizewin_cursor:
+            # Nothing to restore outside of the resize area. Don't
+            # unset the cursor there, or we would fight with the items'
+            # own hover cursors.
             return
-        viewport = self.viewport_or_self
-        if cursor is not None:
-            viewport.setCursor(cursor)
-        else:
-            viewport.unsetCursor()
-        self.last_resizewin_cursor = cursor
+        # Inside the resize area the cursor is re-applied on every move
+        # instead of relying on the cached one, so it is restored even
+        # if something reset it in between (e.g. a widget hover event
+        # or leaving and re-entering the window).
+        self.apply_resize_cursor(cursor)
 
     def dragEnterEvent(self, event):
         mimedata = event.mimeData()
@@ -225,8 +283,7 @@ class MainControlsMixin:
             return True
 
         if self.resizewin_possible:
-            edges = self.resize_edges_for_pos(
-                self.mapToGlobal(event.position()))
+            edges = self.resize_edges_for_local_pos(event.position())
             if edges:
                 self.enter_resizewin_mode(edges, event)
                 event.accept()

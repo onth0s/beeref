@@ -2308,78 +2308,180 @@ def test_mouse_release_movewin(mouse_event_mock, view):
 def make_view_frameless(view):
     view.parent.setWindowFlag(Qt.WindowType.FramelessWindowHint, True)
     view.mapToGlobal = lambda p: p
-    return view.main_window.frameGeometry()
+    return view.viewport().rect()
 
 
-def test_resize_edges_for_pos_edges_and_center(view):
-    geo = make_view_frameless(view)
-    cx, cy = geo.center().x(), geo.center().y()
-    assert view.resize_edges_for_pos(
-        QtCore.QPointF(cx, geo.top() + 2)) == {'top'}
-    assert view.resize_edges_for_pos(
-        QtCore.QPointF(cx, geo.bottom() - 2)) == {'bottom'}
-    assert view.resize_edges_for_pos(
-        QtCore.QPointF(geo.left() + 2, cy)) == {'left'}
-    assert view.resize_edges_for_pos(
-        QtCore.QPointF(geo.right() - 2, cy)) == {'right'}
-    assert view.resize_edges_for_pos(QtCore.QPointF(cx, cy)) == set()
+def mouse_event_mock_at(pos):
+    event = MagicMock()
+    event.button.return_value = Qt.MouseButton.LeftButton
+    event.modifiers.return_value = Qt.KeyboardModifier.NoModifier
+    event.position.return_value = QtCore.QPointF(float(pos.x()), float(pos.y()))
+    return event
 
 
-def test_resize_edges_for_pos_corners(view):
-    geo = make_view_frameless(view)
-    assert view.resize_edges_for_pos(
-        QtCore.QPointF(geo.left() + 2, geo.top() + 2)) == {'left', 'top'}
-    assert view.resize_edges_for_pos(
-        QtCore.QPointF(geo.right() - 2, geo.top() + 2)) == {'right', 'top'}
-    assert view.resize_edges_for_pos(
-        QtCore.QPointF(geo.left() + 2, geo.bottom() - 2)) == {'left', 'bottom'}
-    assert view.resize_edges_for_pos(
-        QtCore.QPointF(geo.right() - 2,
-                       geo.bottom() - 2)) == {'right', 'bottom'}
+def test_resize_edges_for_local_pos_edges_and_center(view):
+    rect = make_view_frameless(view)
+    cx, cy = rect.center().x(), rect.center().y()
+    assert view.resize_edges_for_local_pos(
+        QtCore.QPointF(cx, rect.top() + 2)) == {'top'}
+    assert view.resize_edges_for_local_pos(
+        QtCore.QPointF(cx, rect.bottom() - 2)) == {'bottom'}
+    assert view.resize_edges_for_local_pos(
+        QtCore.QPointF(rect.left() + 2, cy)) == {'left'}
+    assert view.resize_edges_for_local_pos(
+        QtCore.QPointF(rect.right() - 2, cy)) == {'right'}
+    assert view.resize_edges_for_local_pos(QtCore.QPointF(cx, cy)) == set()
 
 
-def test_resize_edges_for_pos_when_titlebar_visible(view):
-    geo = view.main_window.frameGeometry()
-    view.mapToGlobal = lambda p: p
-    assert view.resize_edges_for_pos(
-        QtCore.QPointF(geo.left() + 2, geo.top() + 2)) == set()
+def test_resize_edges_for_local_pos_corners(view):
+    rect = make_view_frameless(view)
+    assert view.resize_edges_for_local_pos(
+        QtCore.QPointF(rect.left() + 2, rect.top() + 2)) == {'left', 'top'}
+    assert view.resize_edges_for_local_pos(
+        QtCore.QPointF(rect.right() - 2, rect.top() + 2)) == {'right', 'top'}
+    assert view.resize_edges_for_local_pos(
+        QtCore.QPointF(rect.left() + 2, rect.bottom() - 2)) == {'left', 'bottom'}
+    assert view.resize_edges_for_local_pos(
+        QtCore.QPointF(rect.right() - 2,
+                       rect.bottom() - 2)) == {'right', 'bottom'}
 
 
-def test_resize_edges_for_pos_when_fullscreen(view):
-    geo = make_view_frameless(view)
-    with patch.object(view.main_window, 'isFullScreen', return_value=True):
-        assert view.resize_edges_for_pos(
-            QtCore.QPointF(geo.left() + 2, geo.top() + 2)) == set()
+def test_resize_edges_for_local_pos_outermost_pixels(view):
+    """Even the very first and very last pixel of the view belongs to
+    the resize area, so an image touching the window border never keeps
+    the user from grabbing the edge."""
+    rect = make_view_frameless(view)
+    assert view.resize_edges_for_local_pos(
+        QtCore.QPointF(rect.left(), rect.top())) == {'left', 'top'}
+    assert view.resize_edges_for_local_pos(
+        QtCore.QPointF(rect.right(), rect.bottom())) == {'right', 'bottom'}
+
+
+def test_resize_band_is_exactly_resize_margin_pixels_thick(view):
+    rect = make_view_frameless(view)
+    margin = view.RESIZE_MARGIN
+    assert view.resize_edges_for_local_pos(
+        QtCore.QPointF(rect.left() + margin - 1, 100)) == {'left'}
+    assert view.resize_edges_for_local_pos(
+        QtCore.QPointF(rect.left() + margin, 100)) == set()
+    assert view.resize_edges_for_local_pos(
+        QtCore.QPointF(100, rect.top() + margin - 1)) == {'top'}
+    assert view.resize_edges_for_local_pos(
+        QtCore.QPointF(100, rect.top() + margin)) == set()
+
+
+def test_resize_edges_independent_of_window_position(view):
+    make_view_frameless(view)
+    before = view.resize_edges_for_local_pos(QtCore.QPointF(2, 100))
+    view.main_window.move(3000, 2000)
+    after = view.resize_edges_for_local_pos(QtCore.QPointF(2, 100))
+    assert before == after == {'left'}
+
+
+def test_edges_within_margin_uses_given_rect(view):
+    """The band follows the control target's own rect, so it stays
+    correct when the view does not start at the window's top left, e.g.
+    when the menu bar is visible."""
+    rect = QtCore.QRect(0, 25, 200, 200)
+    assert view.edges_within_margin(
+        rect, QtCore.QPointF(100, 26)) == {'top'}
+    assert view.edges_within_margin(
+        rect, QtCore.QPointF(100, 25 + view.RESIZE_MARGIN)) == set()
 
 
 @patch('PyQt6.QtWidgets.QGraphicsView.mousePressEvent')
-def test_mouse_press_on_edge_starts_resizewin(mouse_event_mock, view):
-    geo = make_view_frameless(view)
-    event = MagicMock()
-    event.button.return_value = Qt.MouseButton.LeftButton
-    event.modifiers.return_value = None
-    event.position.return_value = QtCore.QPointF(
-        float(geo.right() - 2), float(geo.center().y()))
+def test_resize_band_is_relative_to_view_not_window_frame(
+        mouse_event_mock, qtbot, qapp):
+    """The top of the view is the top resize band, even though the view
+    starts below the menu bar and therefore not at the top of the
+    window. Dragging the menu bar itself cannot be intercepted, so
+    without this the top edge was not resizable at all while the menu
+    bar was visible."""
+    from beeref.view import BeeGraphicsView
+
+    main_window = QtWidgets.QMainWindow()
+    main_window.setGeometry(200, 200, 600, 500)
+    view = BeeGraphicsView(qapp, main_window)
+    main_window.setCentralWidget(view)
+    # Must come after creating the view, since building the actions
+    # applies the saved title bar setting to the window
+    main_window.setWindowFlag(Qt.WindowType.FramelessWindowHint, True)
+    main_window.setMenuBar(QtWidgets.QMenuBar(main_window))
+    main_window.menuBar().addMenu('File')
+    qtbot.addWidget(main_window)
+    main_window.show()
+    QtWidgets.QApplication.processEvents()
+    assert main_window.menuBar().height() > 0
+    assert view.pos().y() > 0
+
+    rect = view.viewport().rect()
+    event = mouse_event_mock_at(
+        QtCore.QPoint(rect.center().x(), rect.top() + 2))
 
     view.mousePressEvent(event)
 
     assert view.resizewin_active is True
-    assert view.resizewin_edges == {'right'}
-    assert view.event_start_geometry == geo
-    assert view.viewport().cursor().shape() == Qt.CursorShape.SizeHorCursor
+    assert view.resizewin_edges == {'top'}
+    mouse_event_mock.assert_not_called()
+    view.exit_resizewin_mode()
+
+
+def test_resize_edges_for_local_pos_when_titlebar_visible(view):
+    rect = view.viewport().rect()
+    assert view.resize_edges_for_local_pos(
+        QtCore.QPointF(rect.left() + 2, rect.top() + 2)) == set()
+
+
+def test_resize_edges_for_local_pos_when_fullscreen(view):
+    make_view_frameless(view)
+    rect = view.viewport().rect()
+    with patch.object(view.main_window, 'isFullScreen', return_value=True):
+        assert view.resize_edges_for_local_pos(
+            QtCore.QPointF(rect.left() + 2, rect.top() + 2)) == set()
+
+
+@pytest.mark.parametrize('pos, expected', [
+    ('topleft', {'left', 'top'}),
+    ('topright', {'right', 'top'}),
+    ('bottomleft', {'left', 'bottom'}),
+    ('bottomright', {'right', 'bottom'}),
+    ('top', {'top'}),
+    ('bottom', {'bottom'}),
+    ('left', {'left'}),
+    ('right', {'right'}),
+])
+@patch('PyQt6.QtWidgets.QGraphicsView.mousePressEvent')
+def test_mouse_press_on_edges_and_corners_starts_resizewin(
+        mouse_event_mock, view, pos, expected):
+    """Every window edge and corner starts a resize drag, even when an
+    image border meets it."""
+    rect = make_view_frameless(view)
+    positions = {
+        'topleft': (rect.left() + 2, rect.top() + 2),
+        'topright': (rect.right() - 2, rect.top() + 2),
+        'bottomleft': (rect.left() + 2, rect.bottom() - 2),
+        'bottomright': (rect.right() - 2, rect.bottom() - 2),
+        'top': (rect.center().x(), rect.top() + 2),
+        'bottom': (rect.center().x(), rect.bottom() - 2),
+        'left': (rect.left() + 2, rect.center().y()),
+        'right': (rect.right() - 2, rect.center().y()),
+    }
+    event = mouse_event_mock_at(QtCore.QPoint(*positions[pos]))
+
+    view.mousePressEvent(event)
+
+    assert view.resizewin_active is True
+    assert view.resizewin_edges == expected
+    assert view.event_start_geometry == view.main_window.frameGeometry()
     mouse_event_mock.assert_not_called()
     event.accept.assert_called_once_with()
+    view.exit_resizewin_mode()
 
 
 @patch('PyQt6.QtWidgets.QGraphicsView.mousePressEvent')
 def test_mouse_press_on_edge_ignored_when_titlebar(mouse_event_mock, view):
-    geo = view.main_window.frameGeometry()
-    view.mapToGlobal = lambda p: p
-    event = MagicMock()
-    event.button.return_value = Qt.MouseButton.LeftButton
-    event.modifiers.return_value = None
-    event.position.return_value = QtCore.QPointF(
-        float(geo.left() + 2), float(geo.top() + 2))
+    rect = view.viewport().rect()
+    event = mouse_event_mock_at(QtCore.QPoint(rect.left() + 2, rect.top() + 2))
 
     view.mousePressEvent(event)
 
@@ -2454,18 +2556,112 @@ def test_key_press_when_resizewin_active(key_event_mock, view):
 
 @patch('PyQt6.QtWidgets.QGraphicsView.mouseMoveEvent')
 def test_hover_near_edge_sets_resize_cursor(mouse_event_mock, view):
-    geo = make_view_frameless(view)
-    event = MagicMock()
-    event.position.return_value = QtCore.QPointF(
-        float(geo.center().x()), float(geo.top() + 2))
+    rect = make_view_frameless(view)
+    event = mouse_event_mock_at(
+        QtCore.QPoint(rect.center().x(), rect.top() + 2))
 
     view.mouseMoveEvent(event)
     assert view.viewport().cursor().shape() == Qt.CursorShape.SizeVerCursor
 
-    event.position.return_value = QtCore.QPointF(
-        float(geo.center().x()), float(geo.center().y()))
+    event = mouse_event_mock_at(
+        QtCore.QPoint(rect.center().x(), rect.center().y()))
     view.mouseMoveEvent(event)
     assert view.viewport().cursor().shape() == Qt.CursorShape.ArrowCursor
+
+
+@patch('PyQt6.QtWidgets.QGraphicsView.mouseMoveEvent')
+def test_hover_over_edge_of_image_keeps_resize_cursor(mouse_event_mock, view):
+    """Hover events are delivered after mouse move events, so an item
+    under the cursor at the window edge must not be able to take the
+    cursor away from the window resize (e.g. via its scale cursor or
+    its cursor reset for any non-handle position)."""
+    rect = make_view_frameless(view)
+    event = mouse_event_mock_at(
+        QtCore.QPoint(rect.left() + 2, rect.center().y()))
+
+    view.mouseMoveEvent(event)
+    assert view.viewport().cursor().shape() == Qt.CursorShape.SizeHorCursor
+
+    with patch.object(view, 'resize_edges_at_cursor', return_value={'left'}):
+        assert view.cursor_owned_by_resize is True
+        view.on_cursor_changed(Qt.CursorShape.SizeFDiagCursor)
+        assert view.viewport().cursor().shape() == Qt.CursorShape.SizeHorCursor
+        view.on_cursor_cleared()
+        assert view.viewport().cursor().shape() == Qt.CursorShape.SizeHorCursor
+
+    # Moving within the edge restores it even if something else reset
+    # the cursor in between
+    view.viewport().unsetCursor()
+    event = mouse_event_mock_at(
+        QtCore.QPoint(rect.left() + 3, rect.center().y()))
+    view.mouseMoveEvent(event)
+    assert view.viewport().cursor().shape() == Qt.CursorShape.SizeHorCursor
+
+
+@patch('PyQt6.QtWidgets.QGraphicsView.mouseMoveEvent')
+def test_item_cursor_applied_away_from_resize_area(mouse_event_mock, view):
+    make_view_frameless(view)
+    with patch.object(view, 'resize_edges_at_cursor', return_value=set()):
+        assert view.cursor_owned_by_resize is False
+        view.on_cursor_changed(Qt.CursorShape.SizeFDiagCursor)
+        assert (view.viewport().cursor().shape()
+                == Qt.CursorShape.SizeFDiagCursor)
+        view.on_cursor_cleared()
+        assert view.viewport().cursor().shape() == Qt.CursorShape.ArrowCursor
+
+
+@patch('PyQt6.QtWidgets.QGraphicsView.mouseMoveEvent')
+def test_item_cursor_suppressed_while_resizing(mouse_event_mock, view):
+    make_view_frameless(view)
+    view.resizewin_active = True
+    assert view.cursor_owned_by_resize is True
+    view.on_cursor_changed(Qt.CursorShape.SizeFDiagCursor)
+    assert view.viewport().cursor().shape() == Qt.CursorShape.ArrowCursor
+    view.on_cursor_cleared()
+    assert view.viewport().cursor().shape() == Qt.CursorShape.ArrowCursor
+
+
+def test_resize_edges_at_cursor(view):
+    make_view_frameless(view)
+    rect = view.viewport().rect()
+    bottom_px = view.viewport().height() - 1
+    global_pos = view.viewport().mapToGlobal(
+        QtCore.QPoint(rect.left() + 2, bottom_px))
+    with patch('PyQt6.QtGui.QCursor.pos', return_value=global_pos):
+        assert view.resize_edges_at_cursor() == {'left', 'bottom'}
+    global_pos = view.viewport().mapToGlobal(QtCore.QPoint(rect.center()))
+    with patch('PyQt6.QtGui.QCursor.pos', return_value=global_pos):
+        assert view.resize_edges_at_cursor() == set()
+
+
+def test_resize_edges_at_cursor_when_titlebar_visible(view):
+    rect = view.viewport().rect()
+    global_pos = view.viewport().mapToGlobal(QtCore.QPoint(rect.left(), rect.top()))
+    with patch('PyQt6.QtGui.QCursor.pos', return_value=global_pos):
+        assert view.resize_edges_at_cursor() == set()
+        assert view.cursor_owned_by_resize is False
+
+
+@patch('PyQt6.QtWidgets.QGraphicsView.mouseReleaseEvent')
+def test_mouse_release_resizewin_gives_cursor_back_to_items(
+        mouse_event_mock, view):
+    """After a resize drag the resize area no longer owns the cursor, so
+    item cursors take over again."""
+    make_view_frameless(view)
+    view.resizewin_active = True
+    view.resizewin_edges = {'left'}
+    event = mouse_event_mock_at(QtCore.QPoint(100, 100))
+
+    view.mouseReleaseEvent(event)
+
+    assert view.resizewin_active is False
+    with patch.object(view, 'resize_edges_at_cursor', return_value=set()):
+        assert view.cursor_owned_by_resize is False
+        view.on_cursor_changed(Qt.CursorShape.SizeFDiagCursor)
+        assert (view.viewport().cursor().shape()
+                == Qt.CursorShape.SizeFDiagCursor)
+    mouse_event_mock.assert_not_called()
+    event.accept.assert_called_once_with()
 
 
 @patch('PyQt6.QtWidgets.QGraphicsView.mouseReleaseEvent')

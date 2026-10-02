@@ -789,11 +789,11 @@ class BeeGraphicsView(MainControlsMixin,
         self.viewport().repaint()
 
     def on_cursor_changed(self, cursor):
-        if self.active_mode is None:
+        if self.active_mode is None and not self.cursor_owned_by_resize:
             self.viewport().setCursor(cursor)
 
     def on_cursor_cleared(self):
-        if self.active_mode is None:
+        if self.active_mode is None and not self.cursor_owned_by_resize:
             self.viewport().unsetCursor()
 
 
